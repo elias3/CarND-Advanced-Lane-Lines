@@ -3,6 +3,7 @@ import cv2
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import pickle
+import glob
 
 
 def abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
@@ -79,7 +80,7 @@ def dir_threshold(img, sobel_kernel=3, thresh=(0, np.pi/2)):
     return binary
 
 
-def pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(200, 255), g_thresh=(180, 255), l_thresh=(170, 255), ksize=5):
+def pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(200, 255), g_thresh=(180, 255), l_thresh=(220, 255), ksize=5):
     img = np.copy(img)
     # Convert to HLS color space
     hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
@@ -87,14 +88,9 @@ def pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(200, 255),
     # Convert to LAB color space
     lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
 
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-
-    binary = np.zeros_like(gray)
-    binary[(gray > g_thresh[0]) & (gray <= g_thresh[1])] = 1
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     r_channel = img[:, :, 0]
-    h_channel = hls[:, :, 0]
-    l_channel = hls[:, :, 1]
     s_channel = hls[:, :, 2]
 
     light_channel = lab[:,:,0]
@@ -102,27 +98,12 @@ def pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(200, 255),
     sxbinary = abs_sobel_thresh(
         img, orient='x', sobel_kernel=15, thresh=sx_thresh)
 
-    # sybinary = abs_sobel_thresh(
-    #     img, orient='y', sobel_kernel=15, thresh=sy_thresh)
-
-
-    mag_binary = mag_thresh(img, sobel_kernel=ksize, mag_thresh=(30, 100))
-    dir_binary = dir_threshold(img, sobel_kernel=ksize, thresh=(0.7, 1.3))
-
-
-    # s_binary = np.zeros_like(s_channel)
-
-
-
     combined = np.zeros_like(s_channel)
-
-
 
     red_thresh = (r_channel >= r_thresh[0]) & (r_channel <= r_thresh[1])
     sat_thresh = (s_channel >= s_thresh[0]) & (s_channel <= s_thresh[1])
     gray_thresh = (gray >= g_thresh[0]) & (gray <= g_thresh[1])
     light_thres = (light_channel >= l_thresh[0]) & (light_channel <= l_thresh[1])
-    light_thres = (light_channel >= 220) & (light_channel <= l_thresh[1])
 
     combined[  ((light_thres | sxbinary==1) | (sat_thresh & gray_thresh)) & (red_thresh)  ] = 1
 
@@ -139,36 +120,44 @@ def pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(200, 255),
    # return color_binary
 
 
-image = mpimg.imread('../test_images/test1.jpg')
-result = pipeline(image)
-cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-cv2.waitKey(0)
 
-image = mpimg.imread('../test_images/test2.jpg')
-result = pipeline(image)
-cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-cv2.waitKey(0)
+images = glob.glob('../test_images/test*.jpg')
+for imgName in images:
+    img = mpimg.imread(imgName)
+    thresh = pipeline(img)
+    plainName = imgName.split("/")[2]
+    cv2.imwrite('../output_images/threshold/'+plainName, thresh)
+
+# image = mpimg.imread('../test_images/test1.jpg')
+# result = pipeline(image)
+# cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+# cv2.waitKey(0)
+
+# image = mpimg.imread('../test_images/test2.jpg')
+# result = pipeline(image)
+# cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+# cv2.waitKey(0)
 
 
-image = mpimg.imread('../test_images/test3.jpg')
-result = pipeline(image)
-cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-cv2.waitKey(0)
+# image = mpimg.imread('../test_images/test3.jpg')
+# result = pipeline(image)
+# cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+# cv2.waitKey(0)
 
-image = mpimg.imread('../test_images/test4.jpg')
-result = pipeline(image)
-cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-cv2.waitKey(0)
+# image = mpimg.imread('../test_images/test4.jpg')
+# result = pipeline(image)
+# cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+# cv2.waitKey(0)
 
-image = mpimg.imread('../test_images/test5.jpg')
-result = pipeline(image)
-cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-cv2.waitKey(0)
+# image = mpimg.imread('../test_images/test5.jpg')
+# result = pipeline(image)
+# cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+# cv2.waitKey(0)
 
-image = mpimg.imread('../test_images/test6.jpg')
-result = pipeline(image)
-cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-cv2.waitKey(0)
+# image = mpimg.imread('../test_images/test6.jpg')
+# result = pipeline(image)
+# cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+# cv2.waitKey(0)
 
 
 # cv2.imshow(result)
