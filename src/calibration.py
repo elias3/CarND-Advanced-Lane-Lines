@@ -78,7 +78,7 @@ def corners_unwarp(img, nx, ny, mtx, dist):
         # Choose offset from image corners to plot detected corners
         # This should be chosen to present the result at the proper aspect ratio
         # My choice of 100 pixels is not exact, but close enough for our purpose here
-        offset = 100  # offset for dst points
+        offset = 20  # offset for dst points
         # Grab the image shape
         img_size = (gray.shape[1], gray.shape[0])
 
@@ -100,12 +100,74 @@ def corners_unwarp(img, nx, ny, mtx, dist):
     return None, None
 
 
+def lines_unwarp(img, nx, ny, mtx, dist):
+    # Use the OpenCV undistort() function to remove distortion
+    undist = cv2.undistort(img, mtx, dist, None, mtx)
+    # Convert undistorted image to grayscale
+    gray = cv2.cvtColor(undist, cv2.COLOR_BGR2GRAY)
+
+# https://www.pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/
+
+    # Choose offset from image corners to plot detected corners
+    # This should be chosen to present the result at the proper aspect ratio
+    # My choice of 100 pixels is not exact, but close enough for our purpose here
+    offset = 100  # offset for dst points
+    # Grab the image shape
+
+    # For source points I'm grabbing the outer four detected corners
+    a = [615, 435]
+    b = [662, 435]
+    c = [188, 720]
+    d = [1118, 720]
+
+    #cv2.fillConvexPoly(undist, np.array([a, b, c, d]), (255, 0, 0))
+    #cv2.imwrite('../output_images/unwraped/elias.jpg', undist)
+
+    src = np.float32([a, b, c, d])
+
+    widthA = np.sqrt(((c[0] - d[0]) ** 2) + ((c[1] - d[1]) ** 2))
+    widthB = np.sqrt(((a[0] - b[0]) ** 2) + ((a[1] - b[1]) ** 2))
+    maxWidth = max(int(widthA), int(widthB))
+
+    heightA = np.sqrt(((b[0] - c[0]) ** 2) + ((b[1] - c[1]) ** 2))
+    heightB = np.sqrt(((a[0] - d[0]) ** 2) + ((a[1] - d[1]) ** 2))
+    maxHeight = max(int(heightA), int(heightB))
+
+    # For destination points, I'm arbitrarily choosing some points to be
+    # a nice fit for displaying our warped result
+    # again, not exact, but close enough for our purposes
+    width = 640
+    # = 320
+    # dst = np.float32([[x_start, 720], [x_start+width, 720],
+    #                   [x_start+width, 200], [x_start, 200]])
+    # dst = np.float32([[offset, offset], [img_size[0]-offset, offset],
+    #                   [img_size[0]-offset, img_size[1]-offset],
+    #                   [offset, img_size[1]-offset]])
+    # Given src and dst points, calculate the perspective transform matrix
+    print(maxWidth, maxHeight)
+    offset = 100
+    width = maxWidth
+    height = maxHeight
+    dst = np.array([
+        [offset, 0],
+        [width + offset, 0],
+        [offset, height],
+        [width + offset, height]])
+
+    M = cv2.getPerspectiveTransform(src, dst)
+    # Warp the image using OpenCV warpPerspective()
+    img_size = (gray.shape[1], gray.shape[0])
+    warped = cv2.warpPerspective(undist, M, img_size)
+    # Return the resulting image and matrix
+    return warped, M
+
+
 def test_distortion():
     # Read
     images = glob.glob('../camera_cal/calibration*.jpg')
     objpoints, imgpoints = calculateCameraPoints(images, 9, 6)
     # testImage = mpimg.imread(os.path.join(dirname, '../test_images/test1.jpg'))
-    images = glob.glob('../test_images/test*.jpg')
+    images = glob.glob('../test_images/straight_lines*.jpg')
     for imgName in images:
         img = cv2.imread(imgName)
         undistorted = calcUndistort(img, objpoints, imgpoints)
@@ -116,7 +178,7 @@ def test_distortion():
    # cv2.waitKey(0)
 
 
-def test_unwarp():
+def test_unwarp_squares():
     # Read
     images = glob.glob('../camera_cal/calibration*.jpg')
     nx = 9
@@ -141,7 +203,33 @@ def test_unwarp():
             cv2.imwrite('../output_images/unwarped/'+plainName, unwarped)
 
 
-# test_unwarp()
+def test_unwarp():
+    # Read
+    images = glob.glob('../camera_cal/calibration*.jpg')
+    nx = 9
+    ny = 6
+    objpoints, imgpoints = calculateCameraPoints(images, nx, ny)
+    isFirst = True
+    mtx = None
+    dist = None
+    images = glob.glob('../test_images/straight_lines*.jpg')
+    for imgName in images:
+        print(imgName)
+        img = cv2.imread(imgName)
+        if isFirst:
+            mtx, dist = calcMtxDist(np.copy(img), objpoints, imgpoints)
+            print(mtx)
+            print(dist)
+            isFirst = False
+       # cv2.imshow('image2', image)
+      #  cv2.waitKey(0)
+        unwarped, _ = lines_unwarp(np.copy(img), nx, ny, mtx, dist)
+        if unwarped is not None:
+            plainName = imgName.split("/")[2]
+            cv2.imwrite('../output_images/unwarped/'+plainName, unwarped)
+
+
+test_unwarp()
 
 # test_distortion()
 
