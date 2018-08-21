@@ -120,8 +120,8 @@ def lines_unwarp(img, mtx, dist):
     c = [188, 720]
     d = [1118, 720]
 
-    #cv2.fillConvexPoly(undist, np.array([a, b, c, d]), (255, 0, 0))
-    #cv2.imwrite('../output_images/unwraped/elias.jpg', undist)
+    #cv2.fillConvexPoly(undist, np.array([a, b, d, c]), (255, 0, 0))
+    # cv2.imwrite('../output_images/unwraped/elias.jpg', undist)
 
     src = np.float32([a, b, c, d])
 
@@ -129,13 +129,14 @@ def lines_unwarp(img, mtx, dist):
     # a nice fit for displaying our warped result
     # again, not exact, but close enough for our purposes
 
-    offset = 300
-    width = 610
+    offset = 310
+    width = 600 # 610
+    height = -1000 #-250
     dst = np.float32([
-        [offset, 0],
-        [offset+width, 0],
-        [offset, 720],
-        [offset+width, 720]])
+        [offset, height],
+        [offset+width, height],
+        [offset, 725],
+        [offset+width, 725]])
 
 
     print(src)
