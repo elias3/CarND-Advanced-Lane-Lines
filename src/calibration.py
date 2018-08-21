@@ -138,9 +138,6 @@ def lines_unwarp(img, mtx, dist):
         [offset, 725],
         [offset+width, 725]])
 
-
-    print(src)
-    print(dst)
     M = cv2.getPerspectiveTransform(src, dst)
     # Warp the image using OpenCV warpPerspective()
     img_size = (gray.shape[1], gray.shape[0])
