@@ -78,7 +78,7 @@ def corners_unwarp(img, nx, ny, mtx, dist):
         # Choose offset from image corners to plot detected corners
         # This should be chosen to present the result at the proper aspect ratio
         # My choice of 100 pixels is not exact, but close enough for our purpose here
-        offset = 20  # offset for dst points
+        offset = 100  # offset for dst points
         # Grab the image shape
         img_size = (gray.shape[1], gray.shape[0])
 
@@ -125,34 +125,18 @@ def lines_unwarp(img, mtx, dist):
 
     src = np.float32([a, b, c, d])
 
-    widthA = np.sqrt(((c[0] - d[0]) ** 2) + ((c[1] - d[1]) ** 2))
-    widthB = np.sqrt(((a[0] - b[0]) ** 2) + ((a[1] - b[1]) ** 2))
-    maxWidth = max(int(widthA), int(widthB))
-
-    heightA = np.sqrt(((b[0] - c[0]) ** 2) + ((b[1] - c[1]) ** 2))
-    heightB = np.sqrt(((a[0] - d[0]) ** 2) + ((a[1] - d[1]) ** 2))
-    maxHeight = max(int(heightA), int(heightB))
-
     # For destination points, I'm arbitrarily choosing some points to be
     # a nice fit for displaying our warped result
     # again, not exact, but close enough for our purposes
-    width = 640
-    # = 320
-    # dst = np.float32([[x_start, 720], [x_start+width, 720],
-    #                   [x_start+width, 200], [x_start, 200]])
-    # dst = np.float32([[offset, offset], [img_size[0]-offset, offset],
-    #                   [img_size[0]-offset, img_size[1]-offset],
-    #                   [offset, img_size[1]-offset]])
-    # Given src and dst points, calculate the perspective transform matrix
-    print(maxWidth, maxHeight)
-    offset = 100
-    width = maxWidth
-    height = maxHeight
+
+    offset = 300
+    width = 650
     dst = np.float32([
         [offset, 0],
-        [width + offset, 0],
-        [offset, height],
-        [width + offset, height]])
+        [offset+width, 0],
+        [offset, 720],
+        [offset+width, 720]])
+
 
     print(src)
     print(dst)
