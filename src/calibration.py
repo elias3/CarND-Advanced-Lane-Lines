@@ -130,7 +130,7 @@ def lines_unwarp(img, mtx, dist):
     # again, not exact, but close enough for our purposes
 
     offset = 300
-    width = 650
+    width = 610
     dst = np.float32([
         [offset, 0],
         [offset+width, 0],
