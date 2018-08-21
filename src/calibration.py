@@ -196,7 +196,7 @@ def test_unwarp():
     isFirst = True
     mtx = None
     dist = None
-    images = glob.glob('../test_images/straight_lines*.jpg')
+    images = glob.glob('../test_images/test*.jpg')
     for imgName in images:
         print(imgName)
         img = cv2.imread(imgName)
