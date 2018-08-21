@@ -100,7 +100,7 @@ def corners_unwarp(img, nx, ny, mtx, dist):
     return None, None
 
 
-def lines_unwarp(img, nx, ny, mtx, dist):
+def lines_unwarp(img, mtx, dist):
     # Use the OpenCV undistort() function to remove distortion
     undist = cv2.undistort(img, mtx, dist, None, mtx)
     # Convert undistorted image to grayscale
@@ -148,12 +148,14 @@ def lines_unwarp(img, nx, ny, mtx, dist):
     offset = 100
     width = maxWidth
     height = maxHeight
-    dst = np.array([
+    dst = np.float32([
         [offset, 0],
         [width + offset, 0],
         [offset, height],
         [width + offset, height]])
 
+    print(src)
+    print(dst)
     M = cv2.getPerspectiveTransform(src, dst)
     # Warp the image using OpenCV warpPerspective()
     img_size = (gray.shape[1], gray.shape[0])
@@ -223,7 +225,7 @@ def test_unwarp():
             isFirst = False
        # cv2.imshow('image2', image)
       #  cv2.waitKey(0)
-        unwarped, _ = lines_unwarp(np.copy(img), nx, ny, mtx, dist)
+        unwarped, _ = lines_unwarp(np.copy(img), mtx, dist)
         if unwarped is not None:
             plainName = imgName.split("/")[2]
             cv2.imwrite('../output_images/unwarped/'+plainName, unwarped)
