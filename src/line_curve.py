@@ -8,8 +8,12 @@ import os
 from color_gradient_thrsh import threshold_pipeline
 from calibration import calculateCameraPoints,calcMtxDist,lines_unwarp
 
-ym_per_pix = 30/720 # meters per pixel in y dimension
-xm_per_pix = 3.7/700 # meters per pixel in x dimension
+# ym_per_pix = 30/720 # meters per pixel in y dimension
+# xm_per_pix = 3.7/700 # meters per pixel in x dimension
+
+ym_per_pix = 1
+xm_per_pix = 1
+
 
 def find_lane_pixels(binary_warped):
     # Take a histogram of the bottom half of the image
@@ -118,11 +122,16 @@ def fit_polynomial(binary_warped):
     # Colors in the left and right lane regions
     out_img[lefty, leftx] = [255, 0, 0]
     out_img[righty, rightx] = [0, 0, 255]
-
+    
     # Plots the left and right polynomials on the lane lines
+    plt.close()
+    plt.imshow(out_img)
     plt.plot(left_fitx, ploty, color='yellow')
     plt.plot(right_fitx, ploty, color='yellow')
-
+    plt.xlim(0, 1280)
+    plt.ylim(720, 0)
+    plt.savefig('test.png') 
+    plt.close()
 
     return out_img, ploty, left_fit, right_fit
 
