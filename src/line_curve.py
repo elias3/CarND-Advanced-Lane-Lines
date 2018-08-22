@@ -141,10 +141,12 @@ def threshAndTransform():
             isFirst = False
         # cv2.imshow('image2', image)
         #  cv2.waitKey(0)
-        img_thrsh = threshold_pipeline(img)
-        unwarped, _ = lines_unwarp(img_thrsh, mtx, dist)
-        out_img = fit_polynomial(unwarped[:, :, 0])
         plainName = imgName.split("/")[2]
+        img_thrsh = threshold_pipeline(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        cv2.imwrite('../output_images/threshold/'+plainName, img_thrsh)
+        unwarped, _ = lines_unwarp(img_thrsh, mtx, dist)
+        cv2.imwrite('../output_images/unwarped_thresh/'+plainName, unwarped)
+        out_img = fit_polynomial(unwarped[:, :, 0])
         cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
 
 threshAndTransform()

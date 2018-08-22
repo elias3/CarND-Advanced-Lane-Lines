@@ -171,5 +171,4 @@ def test():
     cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
     cv2.waitKey(0)
 
-
 # cv2.imshow(result)
