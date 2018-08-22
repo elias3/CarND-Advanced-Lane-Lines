@@ -8,6 +8,8 @@ import os
 from color_gradient_thrsh import threshold_pipeline
 from calibration import calculateCameraPoints,calcMtxDist,lines_unwarp
 
+ym_per_pix = 30/720 # meters per pixel in y dimension
+xm_per_pix = 3.7/700 # meters per pixel in x dimension
 
 def find_lane_pixels(binary_warped):
     # Take a histogram of the bottom half of the image
@@ -91,13 +93,15 @@ def find_lane_pixels(binary_warped):
     return leftx, lefty, rightx, righty, out_img
 
 
+
+
 def fit_polynomial(binary_warped):
     # Find our lane pixels first
     leftx, lefty, rightx, righty, out_img = find_lane_pixels(binary_warped)
 
     # Fit a second order polynomial to each using `np.polyfit`
-    left_fit = np.polyfit(lefty, leftx, 2)
-    right_fit = np.polyfit(righty, rightx, 2)
+    left_fit = np.polyfit(lefty * ym_per_pix, leftx * xm_per_pix, 2)
+    right_fit = np.polyfit(righty * ym_per_pix, rightx * xm_per_pix, 2)
 
     # Generate x and y values for plotting
     ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0] )
@@ -119,7 +123,31 @@ def fit_polynomial(binary_warped):
     plt.plot(left_fitx, ploty, color='yellow')
     plt.plot(right_fitx, ploty, color='yellow')
 
-    return out_img
+
+    return out_img, ploty, left_fit, right_fit
+
+
+def measure_curvature_real(ploty, left_fit_cr, right_fit_cr):
+    '''
+    Calculates the curvature of polynomial functions in meters.
+    '''
+    # Define conversions in x and y from pixels space to meters
+    ym_per_pix = 30/720 # meters per pixel in y dimension
+    xm_per_pix = 3.7/700 # meters per pixel in x dimension
+
+    # Start by generating our fake example data
+    # Make sure to feed in your real data instead in your project!
+
+    # Define y-value where we want radius of curvature
+    # We'll choose the maximum y-value, corresponding to the bottom of the image
+    y_eval = np.max(ploty)
+
+    # Calculation of R_curve (radius of curvature)
+    left_curverad = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
+    right_curverad = ((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
+
+    return left_curverad, right_curverad
+
 
 def threshAndTransform():
     # Read calubration images:
@@ -146,7 +174,9 @@ def threshAndTransform():
         cv2.imwrite('../output_images/threshold/'+plainName, img_thrsh)
         unwarped, _ = lines_unwarp(img_thrsh, mtx, dist)
         cv2.imwrite('../output_images/unwarped_thresh/'+plainName, unwarped)
-        out_img = fit_polynomial(unwarped[:, :, 0])
+        out_img, ploty, left_fit_cr, right_fit_cr = fit_polynomial(unwarped[:, :, 0])
         cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
+        left_curverad, right_curverad = measure_curvature_real(ploty, left_fit_cr, right_fit_cr)
+        print(left_curverad, right_curverad)
 
 threshAndTransform()
