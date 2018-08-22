@@ -80,7 +80,7 @@ def dir_threshold(img, sobel_kernel=7, thresh=(np.pi/2, np.pi/2)):
     return binary
 
 
-def pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(200, 255), g_thresh=(180, 255), l_thresh=(220, 255), ksize=9):
+def threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(200, 255), g_thresh=(180, 255), l_thresh=(220, 255), ksize=9):
     img = np.copy(img)
     # Convert to HLS color space
     hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
@@ -132,45 +132,44 @@ def pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(200, 255),
    #     (np.zeros_like(sxbinary), sxbinary, s_binary)) * 255
    # return color_binary
 
+def test():
+    images = glob.glob('../test_images/test*.jpg')
+    for imgName in images:
+        img = mpimg.imread(imgName)
+        thresh = threshold_pipeline(img)
+        plainName = imgName.split("/")[2]
+        cv2.imwrite('../output_images/threshold/'+plainName, thresh)
+
+    image = mpimg.imread('../test_images/test1.jpg')
+    result = threshold_pipeline(image)
+    cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+    cv2.waitKey(0)
+
+    image = mpimg.imread('../test_images/test2.jpg')
+    result = threshold_pipeline(image)
+    cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+    cv2.waitKey(0)
 
 
-images = glob.glob('../test_images/test*.jpg')
-for imgName in images:
-    img = mpimg.imread(imgName)
-    thresh = pipeline(img)
-    plainName = imgName.split("/")[2]
-    cv2.imwrite('../output_images/threshold/'+plainName, thresh)
+    image = mpimg.imread('../test_images/test3.jpg')
+    result = threshold_pipeline(image)
+    cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+    cv2.waitKey(0)
 
-image = mpimg.imread('../test_images/test1.jpg')
-result = pipeline(image)
-cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-cv2.waitKey(0)
+    image = mpimg.imread('../test_images/test4.jpg')
+    result = threshold_pipeline(image)
+    cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+    cv2.waitKey(0)
 
-image = mpimg.imread('../test_images/test2.jpg')
-result = pipeline(image)
-cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-cv2.waitKey(0)
+    image = mpimg.imread('../test_images/test5.jpg')
+    result = threshold_pipeline(image)
+    cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+    cv2.waitKey(0)
 
-
-image = mpimg.imread('../test_images/test3.jpg')
-result = pipeline(image)
-cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-cv2.waitKey(0)
-
-image = mpimg.imread('../test_images/test4.jpg')
-result = pipeline(image)
-cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-cv2.waitKey(0)
-
-image = mpimg.imread('../test_images/test5.jpg')
-result = pipeline(image)
-cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-cv2.waitKey(0)
-
-image = mpimg.imread('../test_images/test6.jpg')
-result = pipeline(image)
-cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-cv2.waitKey(0)
+    image = mpimg.imread('../test_images/test6.jpg')
+    result = threshold_pipeline(image)
+    cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+    cv2.waitKey(0)
 
 
 # cv2.imshow(result)
