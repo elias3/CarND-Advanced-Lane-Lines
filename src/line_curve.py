@@ -125,7 +125,7 @@ def find_lane_pixels(binary_warped):
     return leftx, lefty, rightx, righty, out_img
 
 
-def fit_polynomial(binary_warped, saveFilePath):
+def fit_polynomial(binary_warped, saveFilePath=None):
     # Find our lane pixels first
     leftx, lefty, rightx, righty, out_img = find_lane_pixels(binary_warped)
 
@@ -149,15 +149,16 @@ def fit_polynomial(binary_warped, saveFilePath):
     out_img[lefty, leftx] = [255, 0, 0]
     out_img[righty, rightx] = [0, 0, 255]
 
-    # Plots the left and right polynomials on the lane lines
-    plt.close()
-    plt.imshow(out_img)
-    plt.plot(left_fitx, ploty, color='yellow')
-    plt.plot(right_fitx, ploty, color='yellow')
-    plt.xlim(0, 1280)
-    plt.ylim(720, 0)
-    plt.savefig(saveFilePath)
-    plt.close()
+    if saveFilePath is not None:
+        # Plots the left and right polynomials on the lane lines
+        plt.close()
+        plt.imshow(out_img)
+        plt.plot(left_fitx, ploty, color='yellow')
+        plt.plot(right_fitx, ploty, color='yellow')
+        plt.xlim(0, 1280)
+        plt.ylim(720, 0)
+        plt.savefig(saveFilePath)
+        plt.close()
 
     return out_img, ploty, left_fit, right_fit, left_fitx, right_fitx
 
@@ -187,7 +188,36 @@ def measure_curvature_real(ploty, left_fit_cr, right_fit_cr):
 
 
 def lane_finding_pipeline(img):
-    return img
+    c = Calibration()
+    mtx, dist = c.calcMtxDist()
+    img_thrsh = threshold_pipeline(img)
+    unwarped, M = lines_unwarp(img_thrsh, mtx, dist)
+    out_img, ploty, left_fit_cr, right_fit_cr, left_fitx, right_fitx = fit_polynomial(
+        unwarped[:, :, 0])
+    # cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
+    left_curverad, right_curverad = measure_curvature_real(
+        ploty, left_fit_cr, right_fit_cr)
+
+    # Create an image to draw the lines on
+    warp_zero = np.zeros_like(unwarped[:, :, 0]).astype(np.uint8)
+    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+    # Recast the x and y points into usable format for cv2.fillPoly()
+    pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+    pts_right = np.array(
+        [np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+    pts = np.hstack((pts_left, pts_right))
+
+    # Draw the lane onto the warped blank image
+    cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+
+    # Warp the blank back to original image space using inverse perspective matrix (Minv)
+    newwarp = cv2.warpPerspective(
+        color_warp, inv(M), (img.shape[1], img.shape[0]))
+    # Combine the result with the original image
+    undist = cv2.undistort(img, mtx, dist, None, mtx)
+    result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
+    return result
 
 
 def process_image(image):
@@ -227,12 +257,11 @@ def threshAndTransform():
     # isFirst = True
     # mtx = None
     # dist = None
-    images = glob.glob('../test_images/test*.jpg')
     c = Calibration()
     mtx, dist = c.calcMtxDist()
     print(mtx)
     print(dist)
-
+    images = glob.glob('../test_images/test*.jpg')
     for imgName in images:
         print(imgName)
         img = cv2.imread(imgName)
@@ -269,12 +298,11 @@ def threshAndTransform():
         result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
         cv2.imwrite('../output_images/transformed/'+plainName, result)
 
-
         # plt.imshow(result)
-threshAndTransform()
+# threshAndTransform()
 
 
-# white_output = '../output_videos/project_video.mp4'
-# clip1 = VideoFileClip("../project_video.mp4")
-# white_clip = clip1.fl_image(process_image)
-# white_clip.write_videofile(white_output, audio=False)
+video_output = '../output_videos/project_video.mp4'
+clip1 = VideoFileClip("../project_video.mp4")
+project_clip = clip1.fl_image(process_image)
+project_clip.write_videofile(video_output, audio=False)
