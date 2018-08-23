@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import glob
 import os
+from moviepy.editor import VideoFileClip
+
 
 from color_gradient_thrsh import threshold_pipeline
 from calibration import calculateCameraPoints,calcMtxDist,lines_unwarp
@@ -181,6 +183,12 @@ def measure_curvature_real(ploty, left_fit_cr, right_fit_cr):
 
     return left_curverad, right_curverad
 
+def lane_finding_pipeline(img):
+    return img
+
+def process_image(image):
+    return lane_finding_pipeline(image)
+
 
 def threshAndTransform():
     # Read calubration images:
@@ -232,8 +240,10 @@ def threshAndTransform():
         cv2.imwrite('../output_images/transformed/'+plainName, result)
 
         #plt.imshow(result)
-
-threshAndTransform()
-
+#threshAndTransform()
 
 
+white_output = '../output_videos/project_video.mp4'
+clip1 = VideoFileClip("../project_video.mp4")
+white_clip = clip1.fl_image(process_image)
+white_clip.write_videofile(white_output, audio=False)
