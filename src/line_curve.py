@@ -11,6 +11,30 @@ from calibration import calculateCameraPoints,calcMtxDist,lines_unwarp
 # ym_per_pix = 30/720 # meters per pixel in y dimension
 # xm_per_pix = 3.7/700 # meters per pixel in x dimension
 
+class Line():
+    def __init__(self):
+        # was the line detected in the last iteration?
+        self.detected = False  
+        # x values of the last n fits of the line
+        self.recent_xfitted = [] 
+        #average x values of the fitted line over the last n iterations
+        self.bestx = None     
+        #polynomial coefficients averaged over the last n iterations
+        self.best_fit = None  
+        #polynomial coefficients for the most recent fit
+        self.current_fit = [np.array([False])]  
+        #radius of curvature of the line in some units
+        self.radius_of_curvature = None 
+        #distance in meters of vehicle center from the line
+        self.line_base_pos = None 
+        #difference in fit coefficients between last and new fits
+        self.diffs = np.array([0,0,0], dtype='float') 
+        #x values for detected line pixels
+        self.allx = None  
+        #y values for detected line pixels
+        self.ally = None  
+
+
 ym_per_pix = 1
 xm_per_pix = 1
 
@@ -96,10 +120,9 @@ def find_lane_pixels(binary_warped):
 
     return leftx, lefty, rightx, righty, out_img
 
+    
 
-
-
-def fit_polynomial(binary_warped):
+def fit_polynomial(binary_warped, saveFilePath):
     # Find our lane pixels first
     leftx, lefty, rightx, righty, out_img = find_lane_pixels(binary_warped)
 
@@ -130,7 +153,7 @@ def fit_polynomial(binary_warped):
     plt.plot(right_fitx, ploty, color='yellow')
     plt.xlim(0, 1280)
     plt.ylim(720, 0)
-    plt.savefig('test.png') 
+    plt.savefig(saveFilePath) 
     plt.close()
 
     return out_img, ploty, left_fit, right_fit
@@ -183,9 +206,12 @@ def threshAndTransform():
         cv2.imwrite('../output_images/threshold/'+plainName, img_thrsh)
         unwarped, _ = lines_unwarp(img_thrsh, mtx, dist)
         cv2.imwrite('../output_images/unwarped_thresh/'+plainName, unwarped)
-        out_img, ploty, left_fit_cr, right_fit_cr = fit_polynomial(unwarped[:, :, 0])
-        cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
+        out_img, ploty, left_fit_cr, right_fit_cr = fit_polynomial(unwarped[:, :, 0], '../output_images/pipeline/'+plainName)
+        #cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
         left_curverad, right_curverad = measure_curvature_real(ploty, left_fit_cr, right_fit_cr)
         print(left_curverad, right_curverad)
 
 threshAndTransform()
+
+
+
