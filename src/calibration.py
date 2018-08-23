@@ -56,7 +56,7 @@ def calcUndistort(img, objpoints, imgpoints):
 
 
 def calcMtxDist(img, objpoints, imgpoints):
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
+    _, mtx, dist, _, _ = cv2.calibrateCamera(
         objpoints, imgpoints, img.shape[1::-1], None, None)
     return mtx, dist
 
@@ -130,8 +130,8 @@ def lines_unwarp(img, mtx, dist):
     # again, not exact, but close enough for our purposes
 
     offset = 310
-    width = 600 # 610
-    height = -1000 #-250
+    width = 600  # 610
+    height = -1000  # -250
     dst = np.float32([
         [offset, height],
         [offset+width, height],
@@ -175,7 +175,7 @@ def test_unwarp_squares():
         print(imgName)
         img = cv2.imread(imgName)
         if isFirst:
-            mtx, dist = calcMtxDist(np.copy(img), objpoints, imgpoints)
+            mtx, dist = calcMtxDist(img, objpoints, imgpoints)
             print(mtx)
             print(dist)
             isFirst = False
@@ -207,13 +207,13 @@ def test_unwarp():
             isFirst = False
        # cv2.imshow('image2', image)
       #  cv2.waitKey(0)
-        unwarped, _  = lines_unwarp(np.copy(img), mtx, dist)
+        unwarped, _ = lines_unwarp(np.copy(img), mtx, dist)
         if unwarped is not None:
             plainName = imgName.split("/")[2]
             cv2.imwrite('../output_images/unwarped/'+plainName, unwarped)
 
 
-#test_unwarp()
+# test_unwarp()
 
 # test_distortion()
 
