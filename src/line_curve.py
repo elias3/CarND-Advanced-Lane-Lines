@@ -17,6 +17,7 @@ from calibration import calculateCameraPoints, calcMtxDist, lines_unwarp
 
 class Line():
     n = 20
+    min_number_pixels = 20000
     def __init__(self):
         # was the line detected in the last iteration?
         self.detected = False
@@ -26,6 +27,8 @@ class Line():
         self.bestx = None
         # polynomial coefficients averaged over the last n iterations
         self.best_fit = None
+        # polynomial coefficients for the last n fits
+        self.polys = []
         # polynomial coefficients for the most recent fit
         self.current_fit = [np.array([False])]
         # radius of curvature of the line in some units
@@ -40,17 +43,23 @@ class Line():
         self.ally = None
 
     def update(self, xfitted, poly, radius, allx, ally):
+        detected = False
+
+        if len(self.allx) > self.min_number_pixels:
+             detected = True
+
         self.radius_of_curvature = radius
         self.allx = allx
         self.ally = ally
-        self.recent_xfitted[-self.n+1:].append(xfitted)
-        #TODO add if
-        self.bestx = np.average(self.recent_xfitted, axis = 0)
+
+        if detected:
+            self.recent_xfitted[-self.n+1:].append(xfitted)
+            self.bestx = np.average(self.recent_xfitted, axis = 0)
+            self.polys[-self.n+1:].append(poly)
+            self.best_fit = np.average(self.polys, axis = 0)
+
         self.diffs = np.subtract(poly,self.current_fit)
-        print(self.diffs)
         self.current_fit = poly
-        #TODO add if
-        #self.best_fit[-self.n+1:].append(poly)
 
 # ym_per_pix = 1
 # xm_per_pix = 1
