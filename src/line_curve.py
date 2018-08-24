@@ -16,6 +16,7 @@ from calibration import calculateCameraPoints, calcMtxDist, lines_unwarp
 # xm_per_pix = 3.7/700 # meters per pixel in x dimension
 
 class Line():
+    n = 20
     def __init__(self):
         # was the line detected in the last iteration?
         self.detected = False
@@ -38,6 +39,18 @@ class Line():
         # y values for detected line pixels
         self.ally = None
 
+    def update(self, xfitted, poly, radius, allx, ally):
+        self.radius_of_curvature = radius
+        self.allx = allx
+        self.ally = ally
+        self.recent_xfitted[-self.n+1:].append(xfitted)
+        #TODO add if
+        self.bestx = np.average(self.recent_xfitted, axis = 0)
+        self.diffs = np.subtract(poly,self.current_fit)
+        print(self.diffs)
+        self.current_fit = poly
+        #TODO add if
+        #self.best_fit[-self.n+1:].append(poly)
 
 # ym_per_pix = 1
 # xm_per_pix = 1
@@ -160,7 +173,7 @@ def fit_polynomial(binary_warped, saveFilePath=None, ym_per_pix = 1, xm_per_pix 
         plt.savefig(saveFilePath)
         plt.close()
 
-    return ploty, left_fit, right_fit, left_fitx, right_fitx
+    return ploty, left_fit, right_fit, left_fitx, right_fitx, leftx, lefty, rightx, righty
 
 
 def measure_curvature_real(ploty, left_fit_cr, right_fit_cr):
@@ -187,18 +200,21 @@ def measure_curvature_real(ploty, left_fit_cr, right_fit_cr):
     return left_curverad, right_curverad
 
 
+left = Line()
+right = Line()
+
 def lane_finding_pipeline(img):
     c = Calibration()
     mtx, dist = c.calcMtxDist()
     img_thrsh = threshold_pipeline(img)
     unwarped, M = lines_unwarp(img_thrsh, mtx, dist)
 
-    ploty, left_fit_cr, right_fit_cr, _, _ = fit_polynomial(
+    ploty, left_fit_cr, right_fit_cr, _, _, _ , _, _, _ = fit_polynomial(
         unwarped[:, :, 0], ym_per_pix = 30/720, xm_per_pix = 3.7/700)
 
     left_curverad, right_curverad = measure_curvature_real(ploty, left_fit_cr, right_fit_cr)
 
-    ploty, _, _, left_fitx, right_fitx = fit_polynomial(
+    ploty, left_fit, right_fit, left_fitx, right_fitx, leftx, lefty, rightx, righty = fit_polynomial(
         unwarped[:, :, 0])
     # cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
 
@@ -221,6 +237,10 @@ def lane_finding_pipeline(img):
     # Combine the result with the original image
     undist = cv2.undistort(img, mtx, dist, None, mtx)
     result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
+
+
+    left.update(left_fitx, left_fit, left_curverad, leftx, lefty)
+    right.update(right_fitx, right_fit, right_curverad, rightx, righty)
 
     curvature = str(int(min(left_curverad, right_curverad)))
     cv2.putText(result,'Radius of Curvature = ' + curvature + '(m)',(100,100), cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),2,cv2.LINE_AA)
@@ -278,14 +298,14 @@ def threshAndTransform():
         unwarped, M = lines_unwarp(img_thrsh, mtx, dist)
         cv2.imwrite('../output_images/unwarped_thresh/'+plainName, unwarped)
 
-        ploty, left_fit_cr, right_fit_cr, _, _ = fit_polynomial(
+        ploty, left_fit_cr, right_fit_cr, _, _, _, _, _, _ = fit_polynomial(
         unwarped[:, :, 0], ym_per_pix = 30/720, xm_per_pix = 3.7/700)
 
         left_curverad, right_curverad = measure_curvature_real(
             ploty, left_fit_cr, right_fit_cr)
         print(left_curverad, right_curverad)
 
-        ploty, _, _, left_fitx, right_fitx = fit_polynomial(
+        ploty, _, _, left_fitx, right_fitx, _, _, _, _ = fit_polynomial(
             unwarped[:, :, 0], '../output_images/pipeline/'+plainName)
         # cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
 
@@ -316,10 +336,10 @@ def threshAndTransform():
         cv2.imwrite('../output_images/transformed_txt/'+plainName, result)
 
         # plt.imshow(result)
-threshAndTransform()
+# threshAndTransform()
 
 
-# video_output = '../output_videos/project_video.mp4'
-# clip1 = VideoFileClip("../project_video.mp4")
-# project_clip = clip1.fl_image(process_image)
-# project_clip.write_videofile(video_output, audio=False)
+video_output = '../output_videos/project_video.mp4'
+clip1 = VideoFileClip("../project_video.mp4")
+project_clip = clip1.fl_image(process_image)
+project_clip.write_videofile(video_output, audio=False)
