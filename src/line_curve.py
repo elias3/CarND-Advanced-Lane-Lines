@@ -11,9 +11,9 @@ from moviepy.editor import VideoFileClip
 from color_gradient_thrsh import threshold_pipeline
 from calibration import calculateCameraPoints, calcMtxDist, lines_unwarp
 
+
 # ym_per_pix = 30/720 # meters per pixel in y dimension
 # xm_per_pix = 3.7/700 # meters per pixel in x dimension
-
 
 class Line():
     def __init__(self):
@@ -39,8 +39,8 @@ class Line():
         self.ally = None
 
 
-ym_per_pix = 1
-xm_per_pix = 1
+# ym_per_pix = 1
+# xm_per_pix = 1
 
 
 def find_lane_pixels(binary_warped):
@@ -125,7 +125,7 @@ def find_lane_pixels(binary_warped):
     return leftx, lefty, rightx, righty, out_img
 
 
-def fit_polynomial(binary_warped, saveFilePath=None):
+def fit_polynomial(binary_warped, saveFilePath=None, ym_per_pix = 1, xm_per_pix = 1) :
     # Find our lane pixels first
     leftx, lefty, rightx, righty, out_img = find_lane_pixels(binary_warped)
 
@@ -144,13 +144,13 @@ def fit_polynomial(binary_warped, saveFilePath=None):
         left_fitx = 1*ploty**2 + 1*ploty
         right_fitx = 1*ploty**2 + 1*ploty
 
-    ## Visualization ##
-    # Colors in the left and right lane regions
-    out_img[lefty, leftx] = [255, 0, 0]
-    out_img[righty, rightx] = [0, 0, 255]
 
     if saveFilePath is not None:
         # Plots the left and right polynomials on the lane lines
+        ## Visualization ##
+        # Colors in the left and right lane regions
+        out_img[lefty, leftx] = [255, 0, 0]
+        out_img[righty, rightx] = [0, 0, 255]
         plt.close()
         plt.imshow(out_img)
         plt.plot(left_fitx, ploty, color='yellow')
@@ -160,7 +160,7 @@ def fit_polynomial(binary_warped, saveFilePath=None):
         plt.savefig(saveFilePath)
         plt.close()
 
-    return out_img, ploty, left_fit, right_fit, left_fitx, right_fitx
+    return ploty, left_fit, right_fit, left_fitx, right_fitx
 
 
 def measure_curvature_real(ploty, left_fit_cr, right_fit_cr):
@@ -192,11 +192,15 @@ def lane_finding_pipeline(img):
     mtx, dist = c.calcMtxDist()
     img_thrsh = threshold_pipeline(img)
     unwarped, M = lines_unwarp(img_thrsh, mtx, dist)
-    out_img, ploty, left_fit_cr, right_fit_cr, left_fitx, right_fitx = fit_polynomial(
+
+    ploty, left_fit_cr, right_fit_cr, _, _ = fit_polynomial(
+        unwarped[:, :, 0], ym_per_pix = 30/720, xm_per_pix = 3.7/700)
+
+    left_curverad, right_curverad = measure_curvature_real(ploty, left_fit_cr, right_fit_cr)
+
+    ploty, _, _, left_fitx, right_fitx = fit_polynomial(
         unwarped[:, :, 0])
     # cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
-    left_curverad, right_curverad = measure_curvature_real(
-        ploty, left_fit_cr, right_fit_cr)
 
     # Create an image to draw the lines on
     warp_zero = np.zeros_like(unwarped[:, :, 0]).astype(np.uint8)
@@ -217,6 +221,9 @@ def lane_finding_pipeline(img):
     # Combine the result with the original image
     undist = cv2.undistort(img, mtx, dist, None, mtx)
     result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
+
+    curvature = str(int(min(left_curverad, right_curverad)))
+    cv2.putText(result,'Radius of Curvature = ' + curvature + '(m)',(100,100), cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),2,cv2.LINE_AA)
     return result
 
 
@@ -270,12 +277,18 @@ def threshAndTransform():
         cv2.imwrite('../output_images/threshold/'+plainName, img_thrsh)
         unwarped, M = lines_unwarp(img_thrsh, mtx, dist)
         cv2.imwrite('../output_images/unwarped_thresh/'+plainName, unwarped)
-        out_img, ploty, left_fit_cr, right_fit_cr, left_fitx, right_fitx = fit_polynomial(
-            unwarped[:, :, 0], '../output_images/pipeline/'+plainName)
-        # cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
+
+        ploty, left_fit_cr, right_fit_cr, _, _ = fit_polynomial(
+        unwarped[:, :, 0], ym_per_pix = 30/720, xm_per_pix = 3.7/700)
+
         left_curverad, right_curverad = measure_curvature_real(
             ploty, left_fit_cr, right_fit_cr)
         print(left_curverad, right_curverad)
+
+        ploty, _, _, left_fitx, right_fitx = fit_polynomial(
+            unwarped[:, :, 0], '../output_images/pipeline/'+plainName)
+        # cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
+
 
         # Create an image to draw the lines on
         warp_zero = np.zeros_like(unwarped[:, :, 0]).astype(np.uint8)
@@ -296,13 +309,17 @@ def threshAndTransform():
         # Combine the result with the original image
         undist = cv2.undistort(img, mtx, dist, None, mtx)
         result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
-        cv2.imwrite('../output_images/transformed/'+plainName, result)
+        #txt = left_curverad, right_curverad
+        curvature = str(int(min(left_curverad, right_curverad)))
+        cv2.putText(result,'Radius of Curvature = ' + curvature + '(m)',(100,100), cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),2,cv2.LINE_AA)
+        # cv2.putText(result,'Vehicle is 0.17m left of center',(100,170), cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),2,cv2.LINE_AA)
+        cv2.imwrite('../output_images/transformed_txt/'+plainName, result)
 
         # plt.imshow(result)
-# threshAndTransform()
+threshAndTransform()
 
 
-video_output = '../output_videos/project_video.mp4'
-clip1 = VideoFileClip("../project_video.mp4")
-project_clip = clip1.fl_image(process_image)
-project_clip.write_videofile(video_output, audio=False)
+# video_output = '../output_videos/project_video.mp4'
+# clip1 = VideoFileClip("../project_video.mp4")
+# project_clip = clip1.fl_image(process_image)
+# project_clip.write_videofile(video_output, audio=False)
