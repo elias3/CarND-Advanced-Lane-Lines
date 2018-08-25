@@ -12,11 +12,8 @@ from color_gradient_thrsh import threshold_pipeline
 from calibration import calculateCameraPoints, calcMtxDist, lines_unwarp
 
 
-# ym_per_pix = 30/720 # meters per pixel in y dimension
-# xm_per_pix = 3.7/700 # meters per pixel in x dimension
-
 class Line():
-    n = 10
+    n = 15
     min_number_pixels = 6000
 
     def __init__(self):
@@ -42,36 +39,39 @@ class Line():
         self.allx = None
         # y values for detected line pixels
         self.ally = None
+        self.count = 0
+        self.avgCurvature = 0
 
-    def update(self, xfitted, poly, radius, allx = None, ally = None):
+    def update(self, xfitted, poly, radius, line_pos, allx, ally, detected):
 
         print("Poly: ", poly)
-        print("Radius: ", radius)
-        print("len(allx) ",len(allx))
-        if len(allx) > self.min_number_pixels:
+        print("Average curvature: ", self.avgCurvature)
+        self.diffs = np.subtract(poly,self.current_fit)
+        print("poly difs: ", self.diffs)
+        self.current_fit = poly
+
+        if detected:
             self.detected = True
 
             self.recent_xfitted = self.recent_xfitted[-self.n+1:]
             self.recent_xfitted.append(xfitted)
-
             self.bestx = np.average(self.recent_xfitted, axis = 0)
 
             self.polys = self.polys[-self.n+1:]
             self.polys.append(poly)
 
             self.best_fit = np.average(self.polys, axis = 0)
+            self.allx = allx
+            self.ally = ally   
+            self.radius_of_curvature = radius
         else:
             self.detected = False
 
-        self.diffs = np.subtract(poly,self.current_fit)
-        self.current_fit = poly
+        sum = self.avgCurvature * self.count
+        self.count = self.count + 1
+        self.avgCurvature = (sum + self.radius_of_curvature) / self.count
 
-        self.radius_of_curvature = radius
-        self.allx = allx
-        self.ally = ally
 
-# ym_per_pix = 1
-# xm_per_pix = 1
 
 
 def find_lane_pixels(binary_warped):
@@ -89,9 +89,9 @@ def find_lane_pixels(binary_warped):
     # Choose the number of sliding windows
     nwindows = 9
     # Set the width of the windows +/- margin
-    margin = 100
+    margin = 80
     # Set minimum number of pixels found to recenter window
-    minpix = 50
+    minpix = 40
 
     # Set height of windows - based on nwindows above and image shape
     window_height = np.int(binary_warped.shape[0]//nwindows)
@@ -169,7 +169,7 @@ def search_around_poly(binary_warped, left_fit, right_fit):
     # HYPERPARAMETER
     # Choose the width of the margin around the previous polynomial to search
     # The quiz grader expects 100 here, but feel free to tune on your own!
-    margin = 100
+    margin = 80
 
     # Grab activated pixels
     nonzero = binary_warped.nonzero()
@@ -234,7 +234,7 @@ def fit_polynomial(binary_warped, saveFilePath=None, ym_per_pix = 1, xm_per_pix 
     return left_fit, right_fit, left_fitx, right_fitx, leftx, lefty, rightx, righty
 
 
-def measure_curvature_real(ploty, left_fit_cr, right_fit_cr, ym_per_pix, xm_per_pix):
+def measure_curvature_real(ploty, left_fit_cr, right_fit_cr, ym_per_pix = 30/720, xm_per_pix = 3.7/700):
     '''
     Calculates the curvature of polynomial functions in meters.
     '''
@@ -265,35 +265,57 @@ def lane_finding_pipeline(img):
     mtx, dist = c.calcMtxDist()
     img_thrsh = threshold_pipeline(img)
     unwarped, M = lines_unwarp(img_thrsh, mtx, dist)
+    
+    binary_unwarped = unwarped[:, :, 0]
 
     leftx, lefty, rightx, righty = None, None, None, None
     
     if left.detected and right.detected:
-        print("detected")
-        print(left.best_fit)
-        print(right.best_fit)
-        leftx, lefty, rightx, righty = search_around_poly(unwarped[:, :, 0], left.best_fit, right.best_fit)
+        print("detected :)")
+        leftx, lefty, rightx, righty = search_around_poly(binary_unwarped, left.best_fit, right.best_fit)
     else:
-        print("not detected")
-        leftx, lefty, rightx, righty, _ = find_lane_pixels(unwarped[:, :, 0])
+        print("not detected :(")
+        leftx, lefty, rightx, righty, _ = find_lane_pixels(binary_unwarped)
 
     xm_per_pix = 3.7/700
     ym_per_pix = 30/720
-    left_fit, right_fit, left_fitx, right_fitx = fit_poly(ploty, leftx, lefty, rightx, righty, ym_per_pix, xm_per_pix)
-    
-
+    left_fit, right_fit, _, _ = fit_poly(ploty, leftx, lefty, rightx, righty, ym_per_pix, xm_per_pix)
     left_curverad, right_curverad = measure_curvature_real(ploty, left_fit, right_fit, ym_per_pix, xm_per_pix)
     left_fit, right_fit, left_fitx, right_fitx = fit_poly(ploty, leftx, lefty, rightx, righty)
 
 
+    roadCenter = (left_fitx[-1] +right_fitx[-1])/2
+    carCenter = (img.shape[1]/2)
+    delta = round((carCenter - roadCenter) * xm_per_pix, 3)
 
-    left.update(left_fitx, left_fit, left_curverad, leftx, lefty)
-    right.update(right_fitx, right_fit, right_curverad, rightx, righty)
+    deltaLeft = (carCenter - left_fitx[-1])*xm_per_pix
+    deltaRight = (right_fitx[-1] - carCenter)*xm_per_pix
+
+    print("delta left ", deltaLeft)
+    print("delta right ", deltaRight)
+    print("left curve ", left_curverad)
+    print("right curve ", right_curverad)
+
+   
+    detected = abs(1 - deltaLeft / deltaRight) < 0.6 and abs(left_fit[0] / right_fit[0] - 1) < 0.3 and abs(left_fit[1] / right_fit[1] - 1) < 0.3
+
+
+    left.update(left_fitx, left_fit, left_curverad, deltaLeft, leftx, lefty, detected)
+    right.update(right_fitx, right_fit, right_curverad, deltaRight, rightx, righty, detected)
+
+
+
+    if not detected and left.bestx is not None and right.bestx is not None:
+        left_fitx = left.bestx
+        right_fitx = right.bestx
+        left_curverad = left.radius_of_curvature
+        right_curverad = right.radius_of_curvature
+
 
     # cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
 
     # Create an image to draw the lines on
-    warp_zero = np.zeros_like(unwarped[:, :, 0]).astype(np.uint8)
+    warp_zero = np.zeros_like(binary_unwarped).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
 
     # Recast the x and y points into usable format for cv2.fillPoly()
@@ -305,6 +327,14 @@ def lane_finding_pipeline(img):
     # Draw the lane onto the warped blank image
     cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
 
+    print("lefty, leftx")
+    print(lefty, leftx)
+    color_warp[lefty, leftx] = [255, 0, 0]
+    color_warp[righty, rightx] = [0, 0, 255]
+
+    # left_lane = np.concatenate((left_fitx[::-1], axis=0),np.concatenate(ploty, axis=0))
+    
+    #cv2.fillPoly(color_warp,[left_lane],color=[255,0,0])
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
     newwarp = cv2.warpPerspective(
         color_warp, inv(M), (img.shape[1], img.shape[0]))
@@ -315,9 +345,6 @@ def lane_finding_pipeline(img):
     curvature = str(int((left_curverad + right_curverad) / 2))
     cv2.putText(result,'Radius of Curvature = ' + curvature + '(m)',(100,100), cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),2,cv2.LINE_AA)
 
-    roadCenter = (left_fitx[-1] +right_fitx[-1])/2
-    carCenter = (img.shape[1]/2)
-    delta = round((carCenter - roadCenter) * xm_per_pix, 2)
 
     txt = ""
     if delta > 0:
