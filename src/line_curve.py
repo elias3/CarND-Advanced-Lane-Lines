@@ -17,7 +17,7 @@ from calibration import calculateCameraPoints, calcMtxDist, lines_unwarp
 
 class Line():
     n = 10
-    min_number_pixels = 20000
+    min_number_pixels = 15000
 
     def __init__(self):
         # was the line detected in the last iteration?
@@ -43,9 +43,11 @@ class Line():
         # y values for detected line pixels
         self.ally = None
 
-    def update(self, xfitted, poly, radius, allx, ally):
+    def update(self, xfitted, poly, radius, allx = None, ally = None):
 
-        if len(allx) > self.min_number_pixels:
+        print("Poly: ", poly)
+        print("Radius: ", radius)
+        if (allx is None) or len(allx) > self.min_number_pixels:
             self.detected = True
             self.recent_xfitted[-self.n+1:].append(xfitted)
             self.bestx = np.average(self.recent_xfitted, axis = 0)
@@ -58,8 +60,10 @@ class Line():
         self.current_fit = poly
 
         self.radius_of_curvature = radius
-        self.allx = allx
-        self.ally = ally
+        if allx is not None:
+            self.allx = allx
+        if ally is not None:
+            self.ally = ally
 
 # ym_per_pix = 1
 # xm_per_pix = 1
@@ -146,6 +150,45 @@ def find_lane_pixels(binary_warped):
 
     return leftx, lefty, rightx, righty, out_img
 
+def fit_poly(ploty, leftx, lefty, rightx, righty, ym_per_pix = 1, xm_per_pix = 1):
+    left_fit = np.polyfit(lefty * ym_per_pix, leftx * xm_per_pix, 2)
+    right_fit = np.polyfit(righty * ym_per_pix, rightx * xm_per_pix, 2)
+
+    # Generate x and y values for plotting
+    left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
+    right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
+    
+    return left_fit, right_fit, left_fitx, right_fitx
+
+def search_around_poly(binary_warped, left_fit, right_fit):
+    # HYPERPARAMETER
+    # Choose the width of the margin around the previous polynomial to search
+    # The quiz grader expects 100 here, but feel free to tune on your own!
+    margin = 100
+
+    # Grab activated pixels
+    nonzero = binary_warped.nonzero()
+    nonzeroy = np.array(nonzero[0])
+    nonzerox = np.array(nonzero[1])
+    
+    ### TO-DO: Set the area of search based on activated x-values ###
+    ### within the +/- margin of our polynomial function ###
+    ### Hint: consider the window areas for the similarly named variables ###
+    ### in the previous quiz, but change the windows to our new search area ###
+    left_lane_inds = ((nonzerox > (left_fit[0]*(nonzeroy**2) + left_fit[1]*nonzeroy + 
+                    left_fit[2] - margin)) & (nonzerox < (left_fit[0]*(nonzeroy**2) + 
+                    left_fit[1]*nonzeroy + left_fit[2] + margin)))
+    right_lane_inds = ((nonzerox > (right_fit[0]*(nonzeroy**2) + right_fit[1]*nonzeroy + 
+                    right_fit[2] - margin)) & (nonzerox < (right_fit[0]*(nonzeroy**2) + 
+                    right_fit[1]*nonzeroy + right_fit[2] + margin)))
+    
+    # Again, extract left and right line pixel positions
+    leftx = nonzerox[left_lane_inds]
+    lefty = nonzeroy[left_lane_inds] 
+    rightx = nonzerox[right_lane_inds]
+    righty = nonzeroy[right_lane_inds]
+
+    return leftx, lefty, rightx, righty
 
 def fit_polynomial(binary_warped, saveFilePath=None, ym_per_pix = 1, xm_per_pix = 1) :
     # Find our lane pixels first
@@ -220,13 +263,17 @@ def lane_finding_pipeline(img):
     img_thrsh = threshold_pipeline(img)
     unwarped, M = lines_unwarp(img_thrsh, mtx, dist)
 
-    left_fit_cr, right_fit_cr, _, _, _ , _, _, _ = fit_polynomial(
-        unwarped[:, :, 0], ym_per_pix = 30/720, xm_per_pix = 3.7/700)
+    leftx, lefty, rightx, righty = None, None, None, None
+    
+    # if left.detected and right.detected:
+    #     leftx, lefty, rightx, righty = search_around_poly(unwarped[:, :, 0], left.best_fit, right.best_fit)
+    # else:
+    leftx, lefty, rightx, righty, _ = find_lane_pixels(unwarped[:, :, 0])
 
-    left_curverad, right_curverad = measure_curvature_real(ploty, left_fit_cr, right_fit_cr)
+    left_fit, right_fit, _, _ = fit_poly(ploty, leftx, lefty, rightx, righty, ym_per_pix = 30/720, xm_per_pix = 3.7/700)
+    left_curverad, right_curverad = measure_curvature_real(ploty, left_fit, right_fit)
+    left_fit, right_fit, left_fitx, right_fitx = fit_poly(ploty, leftx, lefty, rightx, righty)
 
-    left_fit, right_fit, left_fitx, right_fitx, leftx, lefty, rightx, righty = fit_polynomial(
-        unwarped[:, :, 0])
 
     left.update(left_fitx, left_fit, left_curverad, leftx, lefty)
     right.update(right_fitx, right_fit, right_curverad, rightx, righty)
