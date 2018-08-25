@@ -116,6 +116,7 @@ def threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(
 
     # combined[((light_thres | sxbinary == 1) | (sat_thresh & red_thresh))] = 1
 
+    # combined[(light_thres | sxbinary == 1)]
     # this will result in less noise, but less data
     combined[((light_thres | sxbinary == 1) | (
         sat_thresh & gray_thresh)) & (red_thresh)] = 1

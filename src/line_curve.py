@@ -17,7 +17,7 @@ from calibration import calculateCameraPoints, calcMtxDist, lines_unwarp
 
 class Line():
     n = 10
-    min_number_pixels = 15000
+    min_number_pixels = 6000
 
     def __init__(self):
         # was the line detected in the last iteration?
@@ -47,11 +47,18 @@ class Line():
 
         print("Poly: ", poly)
         print("Radius: ", radius)
-        if (allx is None) or len(allx) > self.min_number_pixels:
+        print("len(allx) ",len(allx))
+        if len(allx) > self.min_number_pixels:
             self.detected = True
-            self.recent_xfitted[-self.n+1:].append(xfitted)
+
+            self.recent_xfitted = self.recent_xfitted[-self.n+1:]
+            self.recent_xfitted.append(xfitted)
+
             self.bestx = np.average(self.recent_xfitted, axis = 0)
-            self.polys[-self.n+1:].append(poly)
+
+            self.polys = self.polys[-self.n+1:]
+            self.polys.append(poly)
+
             self.best_fit = np.average(self.polys, axis = 0)
         else:
             self.detected = False
@@ -60,10 +67,8 @@ class Line():
         self.current_fit = poly
 
         self.radius_of_curvature = radius
-        if allx is not None:
-            self.allx = allx
-        if ally is not None:
-            self.ally = ally
+        self.allx = allx
+        self.ally = ally
 
 # ym_per_pix = 1
 # xm_per_pix = 1
@@ -265,10 +270,14 @@ def lane_finding_pipeline(img):
 
     leftx, lefty, rightx, righty = None, None, None, None
     
-    # if left.detected and right.detected:
-    #     leftx, lefty, rightx, righty = search_around_poly(unwarped[:, :, 0], left.best_fit, right.best_fit)
-    # else:
-    leftx, lefty, rightx, righty, _ = find_lane_pixels(unwarped[:, :, 0])
+    if left.detected and right.detected:
+        print("detected")
+        print(left.best_fit)
+        print(right.best_fit)
+        leftx, lefty, rightx, righty = search_around_poly(unwarped[:, :, 0], left.best_fit, right.best_fit)
+    else:
+        print("not detected")
+        leftx, lefty, rightx, righty, _ = find_lane_pixels(unwarped[:, :, 0])
 
     left_fit, right_fit, _, _ = fit_poly(ploty, leftx, lefty, rightx, righty, ym_per_pix = 30/720, xm_per_pix = 3.7/700)
     left_curverad, right_curverad = measure_curvature_real(ploty, left_fit, right_fit)
