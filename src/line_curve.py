@@ -16,8 +16,9 @@ from calibration import calculateCameraPoints, calcMtxDist, lines_unwarp
 # xm_per_pix = 3.7/700 # meters per pixel in x dimension
 
 class Line():
-    n = 20
+    n = 10
     min_number_pixels = 20000
+
     def __init__(self):
         # was the line detected in the last iteration?
         self.detected = False
@@ -43,23 +44,22 @@ class Line():
         self.ally = None
 
     def update(self, xfitted, poly, radius, allx, ally):
-        detected = False
 
-        if len(self.allx) > self.min_number_pixels:
-             detected = True
-
-        self.radius_of_curvature = radius
-        self.allx = allx
-        self.ally = ally
-
-        if detected:
+        if len(allx) > self.min_number_pixels:
+            self.detected = True
             self.recent_xfitted[-self.n+1:].append(xfitted)
             self.bestx = np.average(self.recent_xfitted, axis = 0)
             self.polys[-self.n+1:].append(poly)
             self.best_fit = np.average(self.polys, axis = 0)
+        else:
+            self.detected = False
 
         self.diffs = np.subtract(poly,self.current_fit)
         self.current_fit = poly
+
+        self.radius_of_curvature = radius
+        self.allx = allx
+        self.ally = ally
 
 # ym_per_pix = 1
 # xm_per_pix = 1
@@ -156,7 +156,8 @@ def fit_polynomial(binary_warped, saveFilePath=None, ym_per_pix = 1, xm_per_pix 
     right_fit = np.polyfit(righty * ym_per_pix, rightx * xm_per_pix, 2)
 
     # Generate x and y values for plotting
-    ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0])
+    ploty = Calibration().getPloty()
+
     try:
         left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
         right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
@@ -182,7 +183,7 @@ def fit_polynomial(binary_warped, saveFilePath=None, ym_per_pix = 1, xm_per_pix 
         plt.savefig(saveFilePath)
         plt.close()
 
-    return ploty, left_fit, right_fit, left_fitx, right_fitx, leftx, lefty, rightx, righty
+    return left_fit, right_fit, left_fitx, right_fitx, leftx, lefty, rightx, righty
 
 
 def measure_curvature_real(ploty, left_fit_cr, right_fit_cr):
@@ -214,17 +215,22 @@ right = Line()
 
 def lane_finding_pipeline(img):
     c = Calibration()
+    ploty = c.getPloty()
     mtx, dist = c.calcMtxDist()
     img_thrsh = threshold_pipeline(img)
     unwarped, M = lines_unwarp(img_thrsh, mtx, dist)
 
-    ploty, left_fit_cr, right_fit_cr, _, _, _ , _, _, _ = fit_polynomial(
+    left_fit_cr, right_fit_cr, _, _, _ , _, _, _ = fit_polynomial(
         unwarped[:, :, 0], ym_per_pix = 30/720, xm_per_pix = 3.7/700)
 
     left_curverad, right_curverad = measure_curvature_real(ploty, left_fit_cr, right_fit_cr)
 
-    ploty, left_fit, right_fit, left_fitx, right_fitx, leftx, lefty, rightx, righty = fit_polynomial(
+    left_fit, right_fit, left_fitx, right_fitx, leftx, lefty, rightx, righty = fit_polynomial(
         unwarped[:, :, 0])
+
+    left.update(left_fitx, left_fit, left_curverad, leftx, lefty)
+    right.update(right_fitx, right_fit, right_curverad, rightx, righty)
+
     # cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
 
     # Create an image to draw the lines on
@@ -248,8 +254,6 @@ def lane_finding_pipeline(img):
     result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
 
 
-    left.update(left_fitx, left_fit, left_curverad, leftx, lefty)
-    right.update(right_fitx, right_fit, right_curverad, rightx, righty)
 
     curvature = str(int(min(left_curverad, right_curverad)))
     cv2.putText(result,'Radius of Curvature = ' + curvature + '(m)',(100,100), cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),2,cv2.LINE_AA)
@@ -272,8 +276,14 @@ class Calibration:
             self.mtx, self.dist = calcMtxDist(
                 img, objpoints, imgpoints)
 
+            self.ploty = np.linspace(0, img.shape[0]-1, img.shape[0])
+
         def calcMtxDist(self):
             return self.mtx, self.dist
+
+        def getPloty(self):
+            return self.ploty
+
 
     __instance = __impl()
 
@@ -294,6 +304,7 @@ def threshAndTransform():
     # mtx = None
     # dist = None
     c = Calibration()
+    ploty = c.getPloty()
     mtx, dist = c.calcMtxDist()
     print(mtx)
     print(dist)
@@ -307,14 +318,14 @@ def threshAndTransform():
         unwarped, M = lines_unwarp(img_thrsh, mtx, dist)
         cv2.imwrite('../output_images/unwarped_thresh/'+plainName, unwarped)
 
-        ploty, left_fit_cr, right_fit_cr, _, _, _, _, _, _ = fit_polynomial(
+        left_fit_cr, right_fit_cr, _, _, _, _, _, _ = fit_polynomial(
         unwarped[:, :, 0], ym_per_pix = 30/720, xm_per_pix = 3.7/700)
 
         left_curverad, right_curverad = measure_curvature_real(
             ploty, left_fit_cr, right_fit_cr)
         print(left_curverad, right_curverad)
 
-        ploty, _, _, left_fitx, right_fitx, _, _, _, _ = fit_polynomial(
+        _, _, left_fitx, right_fitx, _, _, _, _ = fit_polynomial(
             unwarped[:, :, 0], '../output_images/pipeline/'+plainName)
         # cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
 
