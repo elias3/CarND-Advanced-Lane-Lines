@@ -234,13 +234,11 @@ def fit_polynomial(binary_warped, saveFilePath=None, ym_per_pix = 1, xm_per_pix 
     return left_fit, right_fit, left_fitx, right_fitx, leftx, lefty, rightx, righty
 
 
-def measure_curvature_real(ploty, left_fit_cr, right_fit_cr):
+def measure_curvature_real(ploty, left_fit_cr, right_fit_cr, ym_per_pix, xm_per_pix):
     '''
     Calculates the curvature of polynomial functions in meters.
     '''
     # Define conversions in x and y from pixels space to meters
-    ym_per_pix = 30/720  # meters per pixel in y dimension
-    xm_per_pix = 3.7/700  # meters per pixel in x dimension
 
     # Start by generating our fake example data
     # Make sure to feed in your real data instead in your project!
@@ -279,9 +277,14 @@ def lane_finding_pipeline(img):
         print("not detected")
         leftx, lefty, rightx, righty, _ = find_lane_pixels(unwarped[:, :, 0])
 
-    left_fit, right_fit, _, _ = fit_poly(ploty, leftx, lefty, rightx, righty, ym_per_pix = 30/720, xm_per_pix = 3.7/700)
-    left_curverad, right_curverad = measure_curvature_real(ploty, left_fit, right_fit)
+    xm_per_pix = 3.7/700
+    ym_per_pix = 30/720
+    left_fit, right_fit, left_fitx, right_fitx = fit_poly(ploty, leftx, lefty, rightx, righty, ym_per_pix, xm_per_pix)
+    
+
+    left_curverad, right_curverad = measure_curvature_real(ploty, left_fit, right_fit, ym_per_pix, xm_per_pix)
     left_fit, right_fit, left_fitx, right_fitx = fit_poly(ploty, leftx, lefty, rightx, righty)
+
 
 
     left.update(left_fitx, left_fit, left_curverad, leftx, lefty)
@@ -309,10 +312,21 @@ def lane_finding_pipeline(img):
     undist = cv2.undistort(img, mtx, dist, None, mtx)
     result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
 
-
-
-    curvature = str(int(min(left_curverad, right_curverad)))
+    curvature = str(int((left_curverad + right_curverad) / 2))
     cv2.putText(result,'Radius of Curvature = ' + curvature + '(m)',(100,100), cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),2,cv2.LINE_AA)
+
+    roadCenter = (left_fitx[-1] +right_fitx[-1])/2
+    carCenter = (img.shape[1]/2)
+    delta = round((carCenter - roadCenter) * xm_per_pix, 2)
+
+    txt = ""
+    if delta > 0:
+        txt = str(abs(delta)) + "m right"
+    else:
+        txt = str(abs(delta)) + "m left"
+  
+  
+    cv2.putText(result,'Vehicle is '+txt+' of center',(100,170), cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),2,cv2.LINE_AA)
     return result
 
 
