@@ -93,20 +93,20 @@ def threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(
     r_channel = img[:, :, 0]
     s_channel = hls[:, :, 2]
 
-    light_channel = lab[:,:,0]
+    light_channel = lab[:, :, 0]
     # Sobel x
     sxbinary = abs_sobel_thresh(
         img, orient='x', sobel_kernel=ksize, thresh=sx_thresh)
 
     # direction = np.array(dir_threshold(img), dtype=bool)
-    mag = np.array( mag_thresh(img), dtype=bool)
+    mag = np.array(mag_thresh(img), dtype=bool)
     combined = np.zeros_like(s_channel)
 
     red_thresh = (r_channel >= r_thresh[0]) & (r_channel <= r_thresh[1])
     sat_thresh = (s_channel >= s_thresh[0]) & (s_channel <= s_thresh[1])
     gray_thresh = (gray >= g_thresh[0]) & (gray <= g_thresh[1])
-    light_thres = (light_channel >= l_thresh[0]) & (light_channel <= l_thresh[1])
-
+    light_thres = (light_channel >= l_thresh[0]) & (
+        light_channel <= l_thresh[1])
 
     # light_thres2 = (light_channellight_channel >= 0) & (light_channel <= l_thresh[1])
 
@@ -114,10 +114,11 @@ def threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(
 
     # combined[  ((light_thres | sxbinary==1 ) | (sat_thresh & gray_thresh)) & (light_thres2) ] = 1
 
-    combined[  ((light_thres | sxbinary == 1) | (sat_thresh & red_thresh))] = 1
+    # combined[((light_thres | sxbinary == 1) | (sat_thresh & red_thresh))] = 1
 
     # this will result in less noise, but less data
-    combined[  ((light_thres | sxbinary==1) | (sat_thresh & gray_thresh)) & (red_thresh)  ] = 1
+    combined[((light_thres | sxbinary == 1) | (
+        sat_thresh & gray_thresh)) & (red_thresh)] = 1
     # combined[  ((light_thres | sxbinary == 1)) ] = 1
 
     # combined[((r_channel >= r_thresh[0]) & (r_channel <= r_thresh[1])) | ((s_channel >= s_thresh[0]) & (
@@ -131,6 +132,7 @@ def threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(
    # color_binary = np.dstack(
    #     (np.zeros_like(sxbinary), sxbinary, s_binary)) * 255
    # return color_binary
+
 
 def test():
     images = glob.glob('../test_images/test*.jpg')
@@ -149,7 +151,6 @@ def test():
     result = threshold_pipeline(image)
     cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
     cv2.waitKey(0)
-
 
     image = mpimg.imread('../test_images/test3.jpg')
     result = threshold_pipeline(image)
