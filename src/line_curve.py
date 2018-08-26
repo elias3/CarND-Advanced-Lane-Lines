@@ -259,6 +259,43 @@ def measure_curvature_real(ploty, left_fit_cr, right_fit_cr, ym_per_pix = 30/720
 left = Line()
 right = Line()
 
+
+class Params():
+    xm_per_pix = 3.7/700
+    ym_per_pix = 30/720
+    def __init__(self, ploty, leftx, lefty, rightx, righty, shape):
+        left_fit, right_fit, _, _ = fit_poly(ploty, leftx, lefty, rightx, righty, self.ym_per_pix, self.xm_per_pix)
+        left_curverad, right_curverad = measure_curvature_real(ploty, left_fit, right_fit, self.ym_per_pix, self.xm_per_pix)
+        left_fit, right_fit, left_fitx, right_fitx = fit_poly(ploty, leftx, lefty, rightx, righty)
+        roadCenter = (left_fitx[-1] +right_fitx[-1])/2
+        carCenter = (shape[1]/2)
+        delta = round((carCenter - roadCenter) * self.xm_per_pix, 3)
+        deltaLeft = (carCenter - left_fitx[-1])*self.xm_per_pix
+        deltaRight = (right_fitx[-1] - carCenter)*self.xm_per_pix
+        self.left_fit = left_fit
+        self.right_fit = right_fit
+        self.left_fitx = left_fitx
+        self.right_fitx = right_fitx
+        self.left_curverad = left_curverad
+        self.right_curverad = right_curverad
+        self.delta = delta
+        self.delta_left = deltaLeft
+        self.delta_right = deltaRight
+
+    def isDetected(self):
+        detected = abs(1 - self.delta_left / self.delta_right) < 0.6 and abs(self.left_fit[1] / self.right_fit[1] - 1) < 0.8
+        return detected
+    def log(self):
+        print("delta left ", self.delta_left)
+        print("delta right ", self.delta_right)
+        print("left curve ", self.left_curverad)
+        print("right curve ", self.right_curverad)
+        print("left_fit[0] ", self.left_fit[0])
+        print("right_fit[0] ", self.right_fit[0])
+        print("left_fit[1] ", self.left_fit[1])
+        print("right_fit[1] ", self.right_fit[1])
+
+
 def lane_finding_pipeline(img):
     c = Calibration()
     ploty = c.getPloty()
@@ -270,55 +307,41 @@ def lane_finding_pipeline(img):
 
     leftx, lefty, rightx, righty = None, None, None, None
     
-    # if left.detected and right.detected:
+    if left.detected and right.detected:
         # print("detected :)")
-        # leftx, lefty, rightx, righty = search_around_poly(binary_unwarped, left.best_fit, right.best_fit)
-    # else:
+        leftx, lefty, rightx, righty = search_around_poly(binary_unwarped, left.best_fit, right.best_fit)
+    else:
         # print("not detected :(")
-    leftx, lefty, rightx, righty, _ = find_lane_pixels(binary_unwarped)
+        leftx, lefty, rightx, righty, _ = find_lane_pixels(binary_unwarped)
 
-    xm_per_pix = 3.7/700
-    ym_per_pix = 30/720
-    left_fit, right_fit, _, _ = fit_poly(ploty, leftx, lefty, rightx, righty, ym_per_pix, xm_per_pix)
-    left_curverad, right_curverad = measure_curvature_real(ploty, left_fit, right_fit, ym_per_pix, xm_per_pix)
-    left_fit, right_fit, left_fitx, right_fitx = fit_poly(ploty, leftx, lefty, rightx, righty)
+    p = Params(ploty, leftx, lefty, rightx, righty, img.shape)
 
-
-    roadCenter = (left_fitx[-1] +right_fitx[-1])/2
-    carCenter = (img.shape[1]/2)
-    delta = round((carCenter - roadCenter) * xm_per_pix, 3)
-
-    deltaLeft = (carCenter - left_fitx[-1])*xm_per_pix
-    deltaRight = (right_fitx[-1] - carCenter)*xm_per_pix
-
-    # print("delta left ", deltaLeft)
-    # print("delta right ", deltaRight)
-    # print("left curve ", left_curverad)
-    # print("right curve ", right_curverad)
-    # print("left_fit[0] ", left_fit[0])
-    # print("right_fit[0] ", right_fit[0])
-    # print("left_fit[1] ", left_fit[1])
-    # print("right_fit[1] ", right_fit[1])
-
-    detected = abs(1 - deltaLeft / deltaRight) < 0.6 and abs(left_fit[1] / right_fit[1] - 1) < 0.8
+    detected = p.isDetected()
     if detected:
         print("Detected :)")
     else:
-        print("Not Detected :(")
+        # retry by finding the pixels from beginning
+        leftx, lefty, rightx, righty, _ = find_lane_pixels(binary_unwarped)
+        p = Params(ploty, leftx, lefty, rightx, righty, img.shape)
+        detected = p.isDetected()
+        if detected:
+            print("===> Retry Detected :)")
+        else:
+            print("===> Retry Not Detected :(")
 
-    left.update(left_fitx, left_fit, left_curverad, deltaLeft, leftx, lefty, detected)
-    right.update(right_fitx, right_fit, right_curverad, deltaRight, rightx, righty, detected)
+    left.update(p.left_fitx, p.left_fit, p.left_curverad, p.delta_left, leftx, lefty, detected)
+    right.update(p.right_fitx, p.right_fit, p.right_curverad, p.delta_right, rightx, righty, detected)
 
+    left_fitx = p.left_fitx
+    right_fitx = p.right_fitx
+    left_curverad = p.left_curverad
+    right_curverad = p.right_curverad
     if not detected and left.bestx is not None and right.bestx is not None:
         left_fitx = left.bestx
         right_fitx = right.bestx
         left_curverad = left.radius_of_curvature
         right_curverad = right.radius_of_curvature
 
-
-    # cv2.imwrite('../output_images/pipeline/'+plainName, out_img)
-
-    # Create an image to draw the lines on
     warp_zero = np.zeros_like(binary_unwarped).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
     lane_lines = np.copy(color_warp)
@@ -334,10 +357,6 @@ def lane_finding_pipeline(img):
     lane_lines[lefty, leftx] = [255, 0, 0]
     lane_lines[righty, rightx] = [0, 0, 255]
 
-
-    # left_lane = np.concatenate((left_fitx[::-1], axis=0),np.concatenate(ploty, axis=0))
-    
-    #cv2.fillPoly(color_warp,[left_lane],color=[255,0,0])
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
     newwarp = cv2.warpPerspective(
         color_warp, inv(M), (img.shape[1], img.shape[0]))
@@ -353,14 +372,11 @@ def lane_finding_pipeline(img):
     curvature = str(int((left_curverad + right_curverad) / 2))
     cv2.putText(result,'Radius of Curvature = ' + curvature + '(m)',(100,100), cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),2,cv2.LINE_AA)
 
-
     txt = ""
-    if delta > 0:
-        txt = str(abs(delta)) + "m right"
+    if p.delta > 0:
+        txt = str(abs(p.delta)) + "m right"
     else:
-        txt = str(abs(delta)) + "m left"
-  
-  
+        txt = str(abs(p.delta)) + "m left"
     cv2.putText(result,'Vehicle is '+txt+' of center',(100,170), cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),2,cv2.LINE_AA)
     return result
 
@@ -465,6 +481,8 @@ def threshAndTransform():
 def pipeline_on_images():
     images = glob.glob('../test_images/test*.jpg')
     for imgName in images:
+        left.detected = False
+        right.detected = False
         print(imgName)
         plainName = imgName.split("/")[2]
         img = cv2.imread(imgName)
@@ -473,7 +491,6 @@ def pipeline_on_images():
 
 
 pipeline_on_images()
-
 # video_output = '../output_videos/project_video.mp4'
 # clip1 = VideoFileClip("../project_video.mp4")
 # project_clip = clip1.fl_image(process_image)
