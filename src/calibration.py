@@ -50,7 +50,7 @@ def calcUndistort(img, objpoints, imgpoints):
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
         objpoints, imgpoints, img.shape[1::-1], None, None)
 
-    dst = cv2.undistort(np.copy(img), mtx, dist, None, mtx)
+    dst = cv2.undistort(img, mtx, dist, None, mtx)
 
     return dst
 
@@ -148,6 +148,7 @@ def lines_unwarp(img, mtx, dist):
 
 def test_distortion():
     # Read
+
     images = glob.glob('../camera_cal/calibration*.jpg')
     objpoints, imgpoints = calculateCameraPoints(images, 9, 6)
     # testImage = mpimg.imread(os.path.join(dirname, '../test_images/test1.jpg'))

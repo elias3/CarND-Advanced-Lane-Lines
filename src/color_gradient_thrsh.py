@@ -81,7 +81,6 @@ def dir_threshold(img, sobel_kernel=7, thresh=(np.pi/2, np.pi/2)):
 
 
 def threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(200, 255), g_thresh=(180, 255), l_thresh=(220, 255), ksize=9):
-    img = np.copy(img)
     # Convert to HLS color space
     hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
 
@@ -97,6 +96,9 @@ def threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(
     # Sobel x
     sxbinary = abs_sobel_thresh(
         img, orient='x', sobel_kernel=ksize, thresh=sx_thresh)
+
+    sybinary = abs_sobel_thresh(
+        img, orient='y', sobel_kernel=ksize, thresh=sx_thresh)
 
     # direction = np.array(dir_threshold(img), dtype=bool)
     mag = np.array(mag_thresh(img), dtype=bool)
@@ -119,7 +121,7 @@ def threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(
     # combined[(light_thres | sxbinary == 1)]
     # this will result in less noise, but less data
     combined[((light_thres | sxbinary == 1) | (
-        sat_thresh & gray_thresh)) & (red_thresh)] = 1
+        sat_thresh & gray_thresh)) & (red_thresh & sybinary == 0)] = 1
     # combined[  ((light_thres | sxbinary == 1)) ] = 1
 
     # combined[((r_channel >= r_thresh[0]) & (r_channel <= r_thresh[1])) | ((s_channel >= s_thresh[0]) & (
@@ -136,41 +138,13 @@ def threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(
 
 
 def test():
-    images = glob.glob('../test_images/test*.jpg')
+    images = glob.glob('../challenge_images/*.jpg')
     for imgName in images:
         img = mpimg.imread(imgName)
-        thresh = threshold_pipeline(img)
+        thresh = threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(
+            20, 100), r_thresh=(200, 255), g_thresh=(180, 255), l_thresh=(220, 255), ksize=9)
         plainName = imgName.split("/")[2]
-        cv2.imwrite('../output_images/threshold/'+plainName, thresh)
+        cv2.imwrite('../output_images/challenge_images/'+plainName, thresh)
 
-    image = mpimg.imread('../test_images/test1.jpg')
-    result = threshold_pipeline(image)
-    cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-    cv2.waitKey(0)
 
-    image = mpimg.imread('../test_images/test2.jpg')
-    result = threshold_pipeline(image)
-    cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-    cv2.waitKey(0)
-
-    image = mpimg.imread('../test_images/test3.jpg')
-    result = threshold_pipeline(image)
-    cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-    cv2.waitKey(0)
-
-    image = mpimg.imread('../test_images/test4.jpg')
-    result = threshold_pipeline(image)
-    cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-    cv2.waitKey(0)
-
-    image = mpimg.imread('../test_images/test5.jpg')
-    result = threshold_pipeline(image)
-    cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-    cv2.waitKey(0)
-
-    image = mpimg.imread('../test_images/test6.jpg')
-    result = threshold_pipeline(image)
-    cv2.imshow('pipelne', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-    cv2.waitKey(0)
-
-# cv2.imshow(result)
+# test()

@@ -342,37 +342,52 @@ right = Line()
 class Params():
     xm_per_pix = 3.7/700
     ym_per_pix = 30/720
+    min_pixels = 30
     def __init__(self, ploty, leftx, lefty, rightx, righty, shape):
-        left_fit, right_fit, _, _ = fit_poly(ploty, leftx, lefty, rightx, righty, self.ym_per_pix, self.xm_per_pix)
-        left_curverad, right_curverad = measure_curvature_real(ploty, left_fit, right_fit, self.ym_per_pix, self.xm_per_pix)
-        left_fit, right_fit, left_fitx, right_fitx = fit_poly(ploty, leftx, lefty, rightx, righty)
-        roadCenter = (left_fitx[-1] +right_fitx[-1])/2
-        carCenter = (shape[1]/2)
-        delta = round((carCenter - roadCenter) * self.xm_per_pix, 3)
-        deltaLeft = (carCenter - left_fitx[-1])*self.xm_per_pix
-        deltaRight = (right_fitx[-1] - carCenter)*self.xm_per_pix
-        self.left_fit = left_fit
-        self.right_fit = right_fit
-        self.left_fitx = left_fitx
-        self.right_fitx = right_fitx
-        self.left_curverad = left_curverad
-        self.right_curverad = right_curverad
-        self.delta = delta
-        self.delta_left = deltaLeft
-        self.delta_right = deltaRight
+
+        print("len(leftx): ", len(leftx))
+        print("len(rightx): ", len(rightx))
+
+        if len(leftx) > self.min_pixels and len(rightx) > self.min_pixels:
+            left_fit, right_fit, _, _ = fit_poly(ploty, leftx, lefty, rightx, righty, self.ym_per_pix, self.xm_per_pix)
+            left_curverad, right_curverad = measure_curvature_real(ploty, left_fit, right_fit, self.ym_per_pix, self.xm_per_pix)
+            left_fit, right_fit, left_fitx, right_fitx = fit_poly(ploty, leftx, lefty, rightx, righty)
+            roadCenter = (left_fitx[-1] +right_fitx[-1])/2
+            carCenter = (shape[1]/2)
+            delta = round((carCenter - roadCenter) * self.xm_per_pix, 3)
+            deltaLeft = (carCenter - left_fitx[-1])*self.xm_per_pix
+            deltaRight = (right_fitx[-1] - carCenter)*self.xm_per_pix
+            self.left_fit = left_fit
+            self.right_fit = right_fit
+            self.left_fitx = left_fitx
+            self.right_fitx = right_fitx
+            self.left_curverad = left_curverad
+            self.right_curverad = right_curverad
+            self.delta = delta
+            self.delta_left = deltaLeft
+            self.delta_right = deltaRight
+            self.is_valid = True
+        else:
+            self.is_valid = False
+
+        # Avoids an error if the above is not implemented fully
+
 
     def isDetected(self):
-        detected = abs(1 - self.delta_left / self.delta_right) < 0.4 and ( abs(abs(self.left_fit[1]) / abs(self.right_fit[1]) - 1) < 1 or abs(1- self.left_curverad / self.right_curverad ) < 1 )
+        detected = self.is_valid and abs(1 - self.delta_left / self.delta_right) < 0.4 and ( abs(abs(self.left_fit[1]) / abs(self.right_fit[1]) - 1) < 1 or abs(1- self.left_curverad / self.right_curverad ) < 1 )
         return detected
     def log(self):
-        print("delta left ", self.delta_left)
-        print("delta right ", self.delta_right)
-        print("left curve ", self.left_curverad)
-        print("right curve ", self.right_curverad)
-        print("left_fit[0] ", self.left_fit[0])
-        print("right_fit[0] ", self.right_fit[0])
-        print("left_fit[1] ", self.left_fit[1])
-        print("right_fit[1] ", self.right_fit[1])
+        if self.is_valid is True:
+            print("delta left ", self.delta_left)
+            print("delta right ", self.delta_right)
+            print("left curve ", self.left_curverad)
+            print("right curve ", self.right_curverad)
+            print("left_fit[0] ", self.left_fit[0])
+            print("right_fit[0] ", self.right_fit[0])
+            print("left_fit[1] ", self.left_fit[1])
+            print("right_fit[1] ", self.right_fit[1])
+        else:
+            print("Object is not valid")
 
 
 def lane_finding_pipeline(img):
@@ -475,6 +490,7 @@ class Calibration:
             images = glob.glob('../camera_cal/calibration*.jpg')
             nx = 9
             ny = 6
+            print("Calibrating...")
             objpoints, imgpoints = calculateCameraPoints(
                 images, nx, ny)
             img = cv2.imread('../test_images/test1.jpg')
@@ -573,9 +589,28 @@ def pipeline_on_images():
         result = lane_finding_pipeline(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         cv2.imwrite('../output_images/lane_finding_pipeline/'+plainName, cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
 
+class Counter():
+    def __init__(self):
+        self.count = 0
+    def advance(self):
+        self.count = self.count + 1
+        return str(self.count)
+
+count = Counter()
+def process_image2(image):
+    if count.count < 10:
+        cv2.imwrite('../challenge_images/'+ count.advance() + '.jpg', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+    return image
 
 # pipeline_on_images()
 video_output = '../output_videos/project_video.mp4'
 clip1 = VideoFileClip("../project_video.mp4")
 project_clip = clip1.fl_image(process_image)
 project_clip.write_videofile(video_output, audio=False)
+
+
+
+# video_output = '../output_videos/challenge_video.mp4'
+# clip1 = VideoFileClip("../challenge_video.mp4")
+# project_clip = clip1.fl_image(process_image2)
+# project_clip.write_videofile(video_output, audio=False)
