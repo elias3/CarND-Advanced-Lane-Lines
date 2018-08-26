@@ -270,12 +270,12 @@ def lane_finding_pipeline(img):
 
     leftx, lefty, rightx, righty = None, None, None, None
     
-    if left.detected and right.detected:
-        print("detected :)")
-        leftx, lefty, rightx, righty = search_around_poly(binary_unwarped, left.best_fit, right.best_fit)
-    else:
-        print("not detected :(")
-        leftx, lefty, rightx, righty, _ = find_lane_pixels(binary_unwarped)
+    # if left.detected and right.detected:
+        # print("detected :)")
+        # leftx, lefty, rightx, righty = search_around_poly(binary_unwarped, left.best_fit, right.best_fit)
+    # else:
+        # print("not detected :(")
+    leftx, lefty, rightx, righty, _ = find_lane_pixels(binary_unwarped)
 
     xm_per_pix = 3.7/700
     ym_per_pix = 30/720
@@ -291,19 +291,23 @@ def lane_finding_pipeline(img):
     deltaLeft = (carCenter - left_fitx[-1])*xm_per_pix
     deltaRight = (right_fitx[-1] - carCenter)*xm_per_pix
 
-    print("delta left ", deltaLeft)
-    print("delta right ", deltaRight)
-    print("left curve ", left_curverad)
-    print("right curve ", right_curverad)
+    # print("delta left ", deltaLeft)
+    # print("delta right ", deltaRight)
+    # print("left curve ", left_curverad)
+    # print("right curve ", right_curverad)
+    # print("left_fit[0] ", left_fit[0])
+    # print("right_fit[0] ", right_fit[0])
+    # print("left_fit[1] ", left_fit[1])
+    # print("right_fit[1] ", right_fit[1])
 
-   
-    detected = abs(1 - deltaLeft / deltaRight) < 0.6 and abs(left_fit[0] / right_fit[0] - 1) < 0.3 and abs(left_fit[1] / right_fit[1] - 1) < 0.3
-
+    detected = abs(1 - deltaLeft / deltaRight) < 0.6 and abs(left_fit[1] / right_fit[1] - 1) < 0.8
+    if detected:
+        print("Detected :)")
+    else:
+        print("Not Detected :(")
 
     left.update(left_fitx, left_fit, left_curverad, deltaLeft, leftx, lefty, detected)
     right.update(right_fitx, right_fit, right_curverad, deltaRight, rightx, righty, detected)
-
-
 
     if not detected and left.bestx is not None and right.bestx is not None:
         left_fitx = left.bestx
