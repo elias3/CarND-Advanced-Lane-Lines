@@ -57,9 +57,9 @@ def find_window_centroids(image, window_width, window_height, margin):
 
 def convolution(warped):
     # window settings
-    window_width = 40 
+    window_width = 50 
     window_height = 80 # Break image into 9 vertical layers since image height is 720
-    margin = 20 # How much to slide left and right for searching
+    margin = 80 # How much to slide left and right for searching
     window_centroids = find_window_centroids(warped, window_width, window_height, margin)
     # If we found any window centers
     if len(window_centroids) > 0:
@@ -93,7 +93,7 @@ def convolution(warped):
 
 
 class Line():
-    n = 20
+    n = 25
 
     def __init__(self):
         # was the line detected in the last iteration?
@@ -344,10 +344,6 @@ class Params():
     ym_per_pix = 30/720
     min_pixels = 400
     def __init__(self, ploty, leftx, lefty, rightx, righty, shape):
-
-        print("len(leftx): ", len(leftx))
-        print("len(rightx): ", len(rightx))
-
         if len(leftx) > self.min_pixels and len(rightx) > self.min_pixels:
             left_fit, right_fit, _, _ = fit_poly(ploty, leftx, lefty, rightx, righty, self.ym_per_pix, self.xm_per_pix)
             left_curverad, right_curverad = measure_curvature_real(ploty, left_fit, right_fit, self.ym_per_pix, self.xm_per_pix)
@@ -373,7 +369,7 @@ class Params():
         # Avoids an error if the above is not implemented fully
 
     def isDetected(self):
-        detected = self.is_valid and abs(1 - self.delta_left / self.delta_right) < 0.35 and ( abs(abs(self.left_fit[1]) / abs(self.right_fit[1]) - 1) < 1 or abs(1- self.left_curverad / self.right_curverad ) < 1 ) #and ( left.best_fit is None or (abs(1 - abs(self.left_fit[0]) / abs(left.best_fit[0])) < 1  and abs(1 - abs(self.right_fit[0]) / abs(right.best_fit[0])) < 1 ) )
+        detected = self.is_valid and abs(1 - self.delta_left / self.delta_right) < 0.2 and ( abs(abs(self.left_fit[1]) / abs(self.right_fit[1]) - 1) < 1 or abs(1- self.left_curverad / self.right_curverad ) < 1 ) #and ( left.best_fit is None or (abs(1 - abs(self.left_fit[0]) / abs(left.best_fit[0])) < 1  and abs(1 - abs(self.right_fit[0]) / abs(right.best_fit[0])) < 1 ) )
         return detected
     def log(self):
         if self.is_valid is True:
@@ -453,8 +449,8 @@ def lane_finding_pipeline(img):
     # Draw the lane onto the warped blank image
     cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
 
-    lane_lines[lefty, leftx] = [255, 0, 0]
-    lane_lines[righty, rightx] = [0, 0, 255]
+    lane_lines[left.ally, left.allx] = [255, 0, 0]
+    lane_lines[right.ally, right.allx] = [0, 0, 255]
 
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
     newwarp = cv2.warpPerspective(
@@ -612,5 +608,5 @@ project_clip.write_videofile(video_output, audio=False)
 
 # video_output = '../output_videos/challenge_video.mp4'
 # clip1 = VideoFileClip("../challenge_video.mp4")
-# project_clip = clip1.fl_image(process_image2)
+# project_clip = clip1.fl_image(process_image)
 # project_clip.write_videofile(video_output, audio=False)
