@@ -317,7 +317,7 @@ def lane_finding_pipeline(img):
     # Create an image to draw the lines on
     warp_zero = np.zeros_like(binary_unwarped).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
-
+    lane_lines = np.copy(color_warp)
     # Recast the x and y points into usable format for cv2.fillPoly()
     pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
     pts_right = np.array(
@@ -327,10 +327,9 @@ def lane_finding_pipeline(img):
     # Draw the lane onto the warped blank image
     cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
 
-    print("lefty, leftx")
-    print(lefty, leftx)
-    color_warp[lefty, leftx] = [255, 0, 0]
-    color_warp[righty, rightx] = [0, 0, 255]
+    lane_lines[lefty, leftx] = [255, 0, 0]
+    lane_lines[righty, rightx] = [0, 0, 255]
+
 
     # left_lane = np.concatenate((left_fitx[::-1], axis=0),np.concatenate(ploty, axis=0))
     
@@ -338,9 +337,14 @@ def lane_finding_pipeline(img):
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
     newwarp = cv2.warpPerspective(
         color_warp, inv(M), (img.shape[1], img.shape[0]))
+
+    lane_lines_warped = cv2.warpPerspective(
+        lane_lines, inv(M), (img.shape[1], img.shape[0]))
+
     # Combine the result with the original image
     undist = cv2.undistort(img, mtx, dist, None, mtx)
-    result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
+    combined = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
+    result = cv2.addWeighted(combined, 1, lane_lines_warped, 1, 0)
 
     curvature = str(int((left_curverad + right_curverad) / 2))
     cv2.putText(result,'Radius of Curvature = ' + curvature + '(m)',(100,100), cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),2,cv2.LINE_AA)
@@ -389,7 +393,6 @@ class Calibration:
 
     def __setattr__(self, attr, value):
         return setattr(self.__instance, attr, value)
-
 
 def threshAndTransform():
     # Read calubration images:
@@ -455,8 +458,19 @@ def threshAndTransform():
         # plt.imshow(result)
 # threshAndTransform()
 
+def pipeline_on_images():
+    images = glob.glob('../test_images/test*.jpg')
+    for imgName in images:
+        print(imgName)
+        plainName = imgName.split("/")[2]
+        img = cv2.imread(imgName)
+        result = lane_finding_pipeline(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        cv2.imwrite('../output_images/lane_finding_pipeline/'+plainName, cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
 
-video_output = '../output_videos/project_video.mp4'
-clip1 = VideoFileClip("../project_video.mp4")
-project_clip = clip1.fl_image(process_image)
-project_clip.write_videofile(video_output, audio=False)
+
+pipeline_on_images()
+
+# video_output = '../output_videos/project_video.mp4'
+# clip1 = VideoFileClip("../project_video.mp4")
+# project_clip = clip1.fl_image(process_image)
+# project_clip.write_videofile(video_output, audio=False)
