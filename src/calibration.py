@@ -148,7 +148,6 @@ def lines_unwarp(img, mtx, dist):
 
 def test_distortion():
     # Read
-
     images = glob.glob('../camera_cal/calibration*.jpg')
     objpoints, imgpoints = calculateCameraPoints(images, 9, 6)
     # testImage = mpimg.imread(os.path.join(dirname, '../test_images/test1.jpg'))

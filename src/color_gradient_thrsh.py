@@ -141,8 +141,7 @@ def test():
     images = glob.glob('../challenge_images/*.jpg')
     for imgName in images:
         img = mpimg.imread(imgName)
-        thresh = threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(
-            20, 100), r_thresh=(200, 255), g_thresh=(180, 255), l_thresh=(220, 255), ksize=9)
+        thresh = threshold_pipeline(img)
         plainName = imgName.split("/")[2]
         cv2.imwrite('../output_images/challenge_images/'+plainName, thresh)
 

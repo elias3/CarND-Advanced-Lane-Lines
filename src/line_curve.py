@@ -93,8 +93,7 @@ def convolution(warped):
 
 
 class Line():
-    n = 15
-    min_number_pixels = 6000
+    n = 20
 
     def __init__(self):
         # was the line detected in the last iteration?
@@ -124,7 +123,7 @@ class Line():
 
     def update(self, xfitted, poly, radius, line_pos, allx, ally, detected):
         # print("Poly: ", poly)
-        # print("Average curvature: ", self.avgCurvature)
+        print("Average curvature: ", self.avgCurvature)
         self.diffs = np.subtract(poly,self.current_fit)
         # print("poly difs: ", self.diffs)
         self.current_fit = poly
@@ -146,9 +145,10 @@ class Line():
         else:
             self.detected = False
 
-        sum = self.avgCurvature * self.count
-        self.count = self.count + 1
-        self.avgCurvature = (sum + self.radius_of_curvature) / self.count
+        if self.radius_of_curvature is not None:
+            sum = self.avgCurvature * self.count
+            self.count = self.count + 1
+            self.avgCurvature = (sum + self.radius_of_curvature) / self.count
 
 
 
@@ -342,7 +342,7 @@ right = Line()
 class Params():
     xm_per_pix = 3.7/700
     ym_per_pix = 30/720
-    min_pixels = 30
+    min_pixels = 400
     def __init__(self, ploty, leftx, lefty, rightx, righty, shape):
 
         print("len(leftx): ", len(leftx))
@@ -372,9 +372,8 @@ class Params():
 
         # Avoids an error if the above is not implemented fully
 
-
     def isDetected(self):
-        detected = self.is_valid and abs(1 - self.delta_left / self.delta_right) < 0.4 and ( abs(abs(self.left_fit[1]) / abs(self.right_fit[1]) - 1) < 1 or abs(1- self.left_curverad / self.right_curverad ) < 1 )
+        detected = self.is_valid and abs(1 - self.delta_left / self.delta_right) < 0.35 and ( abs(abs(self.left_fit[1]) / abs(self.right_fit[1]) - 1) < 1 or abs(1- self.left_curverad / self.right_curverad ) < 1 ) #and ( left.best_fit is None or (abs(1 - abs(self.left_fit[0]) / abs(left.best_fit[0])) < 1  and abs(1 - abs(self.right_fit[0]) / abs(right.best_fit[0])) < 1 ) )
         return detected
     def log(self):
         if self.is_valid is True:
@@ -435,7 +434,8 @@ def lane_finding_pipeline(img):
     right_fitx = p.right_fitx
     left_curverad = p.left_curverad
     right_curverad = p.right_curverad
-    if not detected and left.bestx is not None and right.bestx is not None:
+
+    if left.bestx is not None and right.bestx is not None:
         left_fitx = left.bestx
         right_fitx = right.bestx
         left_curverad = left.radius_of_curvature
