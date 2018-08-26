@@ -362,7 +362,7 @@ class Params():
         self.delta_right = deltaRight
 
     def isDetected(self):
-        detected = abs(1 - self.delta_left / self.delta_right) < 0.6 and abs(self.left_fit[1] / self.right_fit[1] - 1) < 0.8
+        detected = abs(1 - self.delta_left / self.delta_right) < 0.4 and ( abs(abs(self.left_fit[1]) / abs(self.right_fit[1]) - 1) < 1 or abs(1- self.left_curverad / self.right_curverad ) < 1 )
         return detected
     def log(self):
         print("delta left ", self.delta_left)
@@ -574,8 +574,8 @@ def pipeline_on_images():
         cv2.imwrite('../output_images/lane_finding_pipeline/'+plainName, cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
 
 
-pipeline_on_images()
-# video_output = '../output_videos/project_video.mp4'
-# clip1 = VideoFileClip("../project_video.mp4")
-# project_clip = clip1.fl_image(process_image)
-# project_clip.write_videofile(video_output, audio=False)
+# pipeline_on_images()
+video_output = '../output_videos/project_video.mp4'
+clip1 = VideoFileClip("../project_video.mp4")
+project_clip = clip1.fl_image(process_image)
+project_clip.write_videofile(video_output, audio=False)
