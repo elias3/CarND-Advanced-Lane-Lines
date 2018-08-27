@@ -365,11 +365,11 @@ class Params():
             self.is_valid = True
         else:
             self.is_valid = False
-
+        self.width_by_image_width= (right_fitx[-1] - left_fitx[-1]) / shape[1]
         # Avoids an error if the above is not implemented fully
 
     def isDetected(self):
-        detected = self.is_valid and abs(1 - self.delta_left / self.delta_right) < 0.2 and ( abs(abs(self.left_fit[1]) / abs(self.right_fit[1]) - 1) < 1 or abs(1- self.left_curverad / self.right_curverad ) < 1 ) #and ( left.best_fit is None or (abs(1 - abs(self.left_fit[0]) / abs(left.best_fit[0])) < 1  and abs(1 - abs(self.right_fit[0]) / abs(right.best_fit[0])) < 1 ) )
+        detected = self.width_by_image_width < 0.7 and self.is_valid and abs(1 - self.delta_left / self.delta_right) < 0.15 and ( abs(abs(self.left_fit[1]) / abs(self.right_fit[1]) - 1) < 1 or abs(1- self.left_curverad / self.right_curverad ) < 1 ) #and ( left.best_fit is None or (abs(1 - abs(self.left_fit[0]) / abs(left.best_fit[0])) < 1  and abs(1 - abs(self.right_fit[0]) / abs(right.best_fit[0])) < 1 ) )
         return detected
     def log(self):
         if self.is_valid is True:
@@ -598,12 +598,11 @@ def process_image2(image):
         cv2.imwrite('../challenge_images/'+ count.advance() + '.jpg', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
     return image
 
-# pipeline_on_images()
+pipeline_on_images()
 video_output = '../output_videos/project_video.mp4'
 clip1 = VideoFileClip("../project_video.mp4")
 project_clip = clip1.fl_image(process_image)
 project_clip.write_videofile(video_output, audio=False)
-
 
 
 # video_output = '../output_videos/challenge_video.mp4'
