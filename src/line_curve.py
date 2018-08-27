@@ -12,11 +12,14 @@ from color_gradient_thrsh import threshold_pipeline
 from calibration import calculateCameraPoints, calcMtxDist, lines_unwarp
 
 
+#This function was taken from the course material
 def window_mask(width, height, img_ref, center,level):
     output = np.zeros_like(img_ref)
     output[int(img_ref.shape[0]-(level+1)*height):int(img_ref.shape[0]-level*height),max(0,int(center-width/2)):min(int(center+width/2),img_ref.shape[1])] = 1
     return output
 
+
+#This function was taken from the course material
 def find_window_centroids(image, window_width, window_height, margin):
     
     window_centroids = [] # Store the (left,right) window centroid positions per level
@@ -54,7 +57,7 @@ def find_window_centroids(image, window_width, window_height, margin):
 
     return window_centroids
 
-
+#Part of this function was taken from the course material
 def convolution(warped):
     # window settings
     window_width = 50 
@@ -122,7 +125,7 @@ class Line():
 
     def update(self, xfitted, poly, radius, line_pos, allx, ally, detected):
         # print("Poly: ", poly)
-        print("Average curvature: ", self.avgCurvature)
+        # print("Average curvature: ", self.avgCurvature)
         self.diffs = np.subtract(poly,self.current_fit)
         # print("poly difs: ", self.diffs)
         self.current_fit = poly
@@ -157,7 +160,7 @@ class Line():
 
 
 
-
+#This function was taken from the course material
 def find_lane_pixels(binary_warped):
     # Take a histogram of the bottom half of the image
     histogram = np.sum(binary_warped[binary_warped.shape[0]//2:, :], axis=0)
@@ -239,6 +242,7 @@ def find_lane_pixels(binary_warped):
 
     return leftx, lefty, rightx, righty, out_img
 
+
 def fit_poly(ploty, leftx, lefty, rightx, righty, ym_per_pix = 1, xm_per_pix = 1):
     left_fit = np.polyfit(lefty * ym_per_pix, leftx * xm_per_pix, 2)
     right_fit = np.polyfit(righty * ym_per_pix, rightx * xm_per_pix, 2)
@@ -249,6 +253,8 @@ def fit_poly(ploty, leftx, lefty, rightx, righty, ym_per_pix = 1, xm_per_pix = 1
     
     return left_fit, right_fit, left_fitx, right_fitx
 
+
+#This function was taken from the course material
 def search_around_poly(binary_warped, left_fit, right_fit):
     # HYPERPARAMETER
     # Choose the width of the margin around the previous polynomial to search
@@ -278,6 +284,7 @@ def search_around_poly(binary_warped, left_fit, right_fit):
     righty = nonzeroy[right_lane_inds]
 
     return leftx, lefty, rightx, righty
+
 
 def fit_polynomial(binary_warped, saveFilePath=None, ym_per_pix = 1, xm_per_pix = 1) :
     # Find our lane pixels first
@@ -318,6 +325,7 @@ def fit_polynomial(binary_warped, saveFilePath=None, ym_per_pix = 1, xm_per_pix 
     return left_fit, right_fit, left_fitx, right_fitx, leftx, lefty, rightx, righty
 
 
+#Part of this function was taken from the course material
 def measure_curvature_real(ploty, left_fit_cr, right_fit_cr, ym_per_pix = 30/720, xm_per_pix = 3.7/700):
     '''
     Calculates the curvature of polynomial functions in meters.
@@ -341,7 +349,8 @@ def measure_curvature_real(ploty, left_fit_cr, right_fit_cr, ym_per_pix = 30/720
 
 
 
-
+#This class holds the params of the recent fitting and calculates if the two lines
+#resemble a good fit
 class Params():
     xm_per_pix = 3.7/700
     ym_per_pix = 30/720
@@ -402,10 +411,8 @@ def lane_finding_pipeline(img):
     leftx, lefty, rightx, righty = None, None, None, None
 
     if left.detected and right.detected:
-        # print("detected :)")
         leftx, lefty, rightx, righty = search_around_poly(binary_unwarped, left.best_fit, right.best_fit)
     else:
-        # print("not detected :(")
         leftx, lefty, rightx, righty, _ = find_lane_pixels(binary_unwarped)
 
     p = Params(ploty, leftx, lefty, rightx, righty, img.shape)
@@ -480,7 +487,6 @@ def lane_finding_pipeline(img):
         txt = str(abs(p.delta)) + "m left"
     cv2.putText(result,'Vehicle is '+txt+' of center',(100,170), cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),2,cv2.LINE_AA)
     return result
-
 
 def process_image(image):
     return lane_finding_pipeline(image)
@@ -598,14 +604,13 @@ def process_image2(image):
 
 threshAndTransform()
 
-left.n = 1
-right.n = 1
 left = Line()
 right = Line()
+left.n = 1
+right.n = 1
 pipeline_on_images()
 left = Line()
 right = Line()
-
 
 video_output = '../output_videos/project_video.mp4'
 clip1 = VideoFileClip("../project_video.mp4")

@@ -6,15 +6,13 @@ import pickle
 import glob
 
 
+# Part of this function was taken from the course material
 def abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
 
     # Apply the following steps to imgx
-    # 1) Convert to grayscale
-   # gray = cv2.cvtColor(np.copy(img), cv2.COLOR_RGB2GRAY)
+    # 1) Convert to hls
     hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
-    h_channel = hls[:, :, 0]
     l_channel = hls[:, :, 1]
-    s_channel = hls[:, :, 2]
     # 2) Take the derivative in x or y given orient = 'x' or 'y'
     sobel = cv2.Sobel(l_channel, cv2.CV_64F, int(
         orient == 'x'), int(orient == 'y'), ksize=sobel_kernel)
@@ -27,53 +25,6 @@ def abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     binary = np.zeros_like(scaled_sobel)
     binary[(scaled_sobel > thresh[0]) & (scaled_sobel <= thresh[1])] = 1
 
-    # 6) Return this mask as your binary_output image
-   # binary_output = np.copy(img) # Remove this line
-    return binary
-
-def mag_thresh(img, sobel_kernel=7, mag_thresh=(30, 255)):
-
-    # Apply the following steps to img
-    # 1) Convert to grayscale
-   # gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
-    h_channel = hls[:, :, 0]
-    l_channel = hls[:, :, 1]
-    s_channel = hls[:, :, 2]
-    # 2) Take the gradient in x and y separately
-    sobel_x = cv2.Sobel(l_channel, cv2.CV_64F, 1, 0, ksize=sobel_kernel)
-    sobel_y = cv2.Sobel(l_channel, cv2.CV_64F, 0, 1, ksize=sobel_kernel)
-    # 3) Calculate the magnitude
-    abs_sobel = np.sqrt(sobel_x**2+sobel_y**2)
-    # 4) Scale to 8-bit (0 - 255) and convert to type = np.uint8
-    scaled_sobel = np.uint8(255*abs_sobel/np.max(abs_sobel))
-
-    # 5) Create a binary mask where mag thresholds are met
-    binary = np.zeros_like(scaled_sobel)
-    binary[(scaled_sobel > mag_thresh[0]) & (scaled_sobel < mag_thresh[1])] = 1
-    # 6) Return this mask as your binary_output image
-    return binary
-
-
-def dir_threshold(img, sobel_kernel=7, thresh=(np.pi/2, np.pi/2)):
-
-    # Apply the following steps to img
-    # 1) Convert to grayscale
-   # gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
-    l_channel = hls[:, :, 1]
-    # 2) Take the gradient in x and y separately
-    sobel_x = cv2.Sobel(l_channel, cv2.CV_64F, 1, 0, ksize=sobel_kernel)
-    sobel_y = cv2.Sobel(l_channel, cv2.CV_64F, 0, 1, ksize=sobel_kernel)
-    # 3) Take the absolute value of the x and y gradients
-    abs_sobel_x = np.absolute(sobel_x)
-    abs_sobel_y = np.absolute(sobel_y)
-    # 4) Use np.arctan2(abs_sobely, abs_sobelx) to calculate the direction of the gradient
-    direction = np.arctan2(abs_sobel_y, abs_sobel_x)
-    # 5) Create a binary mask where direction thresholds are met
-    binary = np.zeros_like(direction)
-    binary[(direction > thresh[0]) & (direction < thresh[1])] = 1
-    # 6) Return this mask as your binary_output image
     return binary
 
 
@@ -97,7 +48,6 @@ def threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(
     sybinary = abs_sobel_thresh(
         img, orient='y', sobel_kernel=ksize, thresh=sx_thresh)
 
-    # direction = np.array(dir_threshold(img), dtype=bool)
     combined = np.zeros_like(s_channel)
 
     red_thresh = (r_channel >= r_thresh[0]) & (r_channel <= r_thresh[1])
@@ -120,4 +70,4 @@ def test():
         cv2.imwrite('../output_images/challenge_images/'+plainName, thresh)
 
 
-test()
+#test()
