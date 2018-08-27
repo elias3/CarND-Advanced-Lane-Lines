@@ -31,7 +31,6 @@ def abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
    # binary_output = np.copy(img) # Remove this line
     return binary
 
-
 def mag_thresh(img, sobel_kernel=7, mag_thresh=(30, 255)):
 
     # Apply the following steps to img
@@ -62,9 +61,7 @@ def dir_threshold(img, sobel_kernel=7, thresh=(np.pi/2, np.pi/2)):
     # 1) Convert to grayscale
    # gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
-    h_channel = hls[:, :, 0]
     l_channel = hls[:, :, 1]
-    s_channel = hls[:, :, 2]
     # 2) Take the gradient in x and y separately
     sobel_x = cv2.Sobel(l_channel, cv2.CV_64F, 1, 0, ksize=sobel_kernel)
     sobel_y = cv2.Sobel(l_channel, cv2.CV_64F, 0, 1, ksize=sobel_kernel)
@@ -101,7 +98,6 @@ def threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(
         img, orient='y', sobel_kernel=ksize, thresh=sx_thresh)
 
     # direction = np.array(dir_threshold(img), dtype=bool)
-    mag = np.array(mag_thresh(img), dtype=bool)
     combined = np.zeros_like(s_channel)
 
     red_thresh = (r_channel >= r_thresh[0]) & (r_channel <= r_thresh[1])
@@ -110,31 +106,9 @@ def threshold_pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100), r_thresh=(
     light_thres = (light_channel >= l_thresh[0]) & (
         light_channel <= l_thresh[1])
 
-    # light_thres2 = (light_channellight_channel >= 0) & (light_channel <= l_thresh[1])
-
-    sat_thresh2 = (s_channel >= 0) & (s_channel <= s_thresh[1])
-
-    # combined[  ((light_thres | sxbinary==1 ) | (sat_thresh & gray_thresh)) & (light_thres2) ] = 1
-
-    # combined[((light_thres | sxbinary == 1) | (sat_thresh & red_thresh))] = 1
-
-    # combined[(light_thres | sxbinary == 1)]
-    # this will result in less noise, but less data
     combined[((light_thres | sxbinary == 1) | (
-        sat_thresh & gray_thresh)) & (red_thresh & sybinary == 0)] = 1
-    # combined[  ((light_thres | sxbinary == 1)) ] = 1
-
-    # combined[((r_channel >= r_thresh[0]) & (r_channel <= r_thresh[1])) | ((s_channel >= s_thresh[0]) & (
-    #     s_channel <= s_thresh[1])) & ()] = 1
-    #   & (r_channel >= r_thresh[0]) & (r_channel <= r_thresh[1])) | ((sxbinary == 1) & (sybinary == 1))
-    # Stack each channel
+        sat_thresh & gray_thresh)) & (red_thresh | sybinary == 1)] = 1
     return np.dstack((combined, combined, combined)) * 255
-    # return np.dstack((np.zeros_like(s_channel), combined, sxbinary)) * 255
-
-   # return np.dstack((r_binary, s_binary, sxbinary)) * 255
-   # color_binary = np.dstack(
-   #     (np.zeros_like(sxbinary), sxbinary, s_binary)) * 255
-   # return color_binary
 
 
 def test():
@@ -146,4 +120,4 @@ def test():
         cv2.imwrite('../output_images/challenge_images/'+plainName, thresh)
 
 
-# test()
+test()

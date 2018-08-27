@@ -91,7 +91,6 @@ def convolution(warped):
         return None, None, None,None
 
 
-
 class Line():
     n = 30
 
@@ -131,7 +130,13 @@ class Line():
         if detected:
             self.detected = True
 
-            self.recent_xfitted = self.recent_xfitted[-self.n+1:]
+            if self.n == 1:
+                self.recent_xfitted = []
+                self.polys = []
+            else:
+                self.recent_xfitted = self.recent_xfitted[-self.n+1:]
+                self.polys = self.polys[-self.n+1:]
+
             self.recent_xfitted.append(xfitted)
             self.bestx = np.average(self.recent_xfitted, axis = 0)
 
@@ -168,9 +173,9 @@ def find_lane_pixels(binary_warped):
     # Choose the number of sliding windows
     nwindows = 9
     # Set the width of the windows +/- margin
-    margin = 80
+    margin = 100
     # Set minimum number of pixels found to recenter window
-    minpix = 40
+    minpix = 50
 
     # Set height of windows - based on nwindows above and image shape
     window_height = np.int(binary_warped.shape[0]//nwindows)
@@ -335,8 +340,6 @@ def measure_curvature_real(ploty, left_fit_cr, right_fit_cr, ym_per_pix = 30/720
     return left_curverad, right_curverad
 
 
-left = Line()
-right = Line()
 
 
 class Params():
@@ -362,14 +365,15 @@ class Params():
             self.delta = delta
             self.delta_left = deltaLeft
             self.delta_right = deltaRight
+            self.width_by_image_width= (right_fitx[-1] - left_fitx[-1]) / shape[1]
             self.is_valid = True
         else:
             self.is_valid = False
-        self.width_by_image_width= (right_fitx[-1] - left_fitx[-1]) / shape[1]
+        
         # Avoids an error if the above is not implemented fully
 
     def isDetected(self):
-        detected = self.width_by_image_width < 0.7 and self.is_valid and abs(1 - self.delta_left / self.delta_right) < 0.15 and ( abs(abs(self.left_fit[1]) / abs(self.right_fit[1]) - 1) < 1 or abs(1- self.left_curverad / self.right_curverad ) < 1 ) #and ( left.best_fit is None or (abs(1 - abs(self.left_fit[0]) / abs(left.best_fit[0])) < 1  and abs(1 - abs(self.right_fit[0]) / abs(right.best_fit[0])) < 1 ) )
+        detected = self.is_valid and self.width_by_image_width < 0.7 and abs(1 - self.delta_left / self.delta_right) < 0.15 and ( abs(abs(self.left_fit[1]) / abs(self.right_fit[1]) - 1) < 1 or abs(1- self.left_curverad / self.right_curverad ) < 1 ) #and ( left.best_fit is None or (abs(1 - abs(self.left_fit[0]) / abs(left.best_fit[0])) < 1  and abs(1 - abs(self.right_fit[0]) / abs(right.best_fit[0])) < 1 ) )
         return detected
     def log(self):
         if self.is_valid is True:
@@ -389,6 +393,7 @@ def lane_finding_pipeline(img):
     c = Calibration()
     ploty = c.getPloty()
     mtx, dist = c.calcMtxDist()
+
     img_thrsh = threshold_pipeline(img)
     unwarped, M = lines_unwarp(img_thrsh, mtx, dist)
     
@@ -409,6 +414,7 @@ def lane_finding_pipeline(img):
     if detected:
         print("Detected :)")
     else:
+        p.log()
         # retry by finding the pixels from beginning
         leftx, lefty, rightx, righty = convolution(binary_unwarped)
         p = Params(ploty, leftx, lefty, rightx, righty, img.shape)
@@ -511,14 +517,6 @@ class Calibration:
         return setattr(self.__instance, attr, value)
 
 def threshAndTransform():
-    # Read calubration images:
-    # images = glob.glob('../camera_cal/calibration*.jpg')
-    # nx = 9
-    # ny = 6
-    # objpoints, imgpoints = calculateCameraPoints(images, nx, ny)
-    # isFirst = True
-    # mtx = None
-    # dist = None
     c = Calibration()
     ploty = c.getPloty()
     mtx, dist = c.calcMtxDist()
@@ -572,12 +570,13 @@ def threshAndTransform():
         cv2.imwrite('../output_images/transformed_txt/'+plainName, result)
 
         # plt.imshow(result)
-# threshAndTransform()
 
 def pipeline_on_images():
     images = glob.glob('../test_images/test*.jpg')
     for imgName in images:
         print(imgName)
+        left.detected = False
+        right.detected = False
         plainName = imgName.split("/")[2]
         img = cv2.imread(imgName)
         result = lane_finding_pipeline(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
@@ -597,14 +596,38 @@ def process_image2(image):
     return image
 
 
-# pipeline_on_images()
+threshAndTransform()
+
+left.n = 1
+right.n = 1
+left = Line()
+right = Line()
+pipeline_on_images()
+left = Line()
+right = Line()
+
+
 video_output = '../output_videos/project_video.mp4'
 clip1 = VideoFileClip("../project_video.mp4")
 project_clip = clip1.fl_image(process_image)
 project_clip.write_videofile(video_output, audio=False)
 
+left = Line()
+right = Line()
 
-# video_output = '../output_videos/challenge_video.mp4'
-# clip1 = VideoFileClip("../challenge_video.mp4")
-# project_clip = clip1.fl_image(process_image)
-# project_clip.write_videofile(video_output, audio=False)
+
+video_output = '../output_videos/challenge_video.mp4'
+clip1 = VideoFileClip("../challenge_video.mp4")
+project_clip = clip1.fl_image(process_image)
+project_clip.write_videofile(video_output, audio=False)
+
+
+left = Line()
+right = Line()
+
+video_output = '../output_videos/harder_challenge_video.mp4'
+clip1 = VideoFileClip("../harder_challenge_video.mp4")
+project_clip = clip1.fl_image(process_image)
+project_clip.write_videofile(video_output, audio=False)
+
+
