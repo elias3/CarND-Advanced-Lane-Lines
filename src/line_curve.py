@@ -93,7 +93,7 @@ def convolution(warped):
 
 
 class Line():
-    n = 25
+    n = 30
 
     def __init__(self):
         # was the line detected in the last iteration?
@@ -410,18 +410,18 @@ def lane_finding_pipeline(img):
         print("Detected :)")
     else:
         # retry by finding the pixels from beginning
-        leftx, lefty, rightx, righty, _ = find_lane_pixels(binary_unwarped)
+        leftx, lefty, rightx, righty = convolution(binary_unwarped)
         p = Params(ploty, leftx, lefty, rightx, righty, img.shape)
         detected = p.isDetected()
         if detected:
-            print("===> Retry Detected :)")
+            print("===> Conv detected :)")
         else:
             p.log()
-            leftx, lefty, rightx, righty = convolution(binary_unwarped)
+            leftx, lefty, rightx, righty, _ = find_lane_pixels(binary_unwarped)
             p = Params(ploty, leftx, lefty, rightx, righty, img.shape)
             detected = p.isDetected()
             if detected:
-                print("===> Conv detected :)")
+                print("===> Retry Detected :)")
 
     left.update(p.left_fitx, p.left_fit, p.left_curverad, p.delta_left, leftx, lefty, detected)
     right.update(p.right_fitx, p.right_fit, p.right_curverad, p.delta_right, rightx, righty, detected)
@@ -577,8 +577,6 @@ def threshAndTransform():
 def pipeline_on_images():
     images = glob.glob('../test_images/test*.jpg')
     for imgName in images:
-        left.detected = False
-        right.detected = False
         print(imgName)
         plainName = imgName.split("/")[2]
         img = cv2.imread(imgName)
@@ -598,7 +596,8 @@ def process_image2(image):
         cv2.imwrite('../challenge_images/'+ count.advance() + '.jpg', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
     return image
 
-pipeline_on_images()
+
+# pipeline_on_images()
 video_output = '../output_videos/project_video.mp4'
 clip1 = VideoFileClip("../project_video.mp4")
 project_clip = clip1.fl_image(process_image)
