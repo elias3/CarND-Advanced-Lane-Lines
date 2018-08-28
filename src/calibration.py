@@ -5,7 +5,9 @@ import matplotlib.image as mpimg
 import glob
 import os
 
-#Part of this function was taken from the course material
+# Part of this function was taken from the course material
+
+
 def calculateCameraPoints(images, grid_m, grid_n):
     objWorldPoints = []  # 3D points in real world space
     imgPlanePoints = []  # 2D point in image plane
@@ -45,7 +47,9 @@ def calculateCameraPoints(images, grid_m, grid_n):
 
     return objWorldPoints, imgPlanePoints
 
-#Part of this function was taken from the course material
+# Part of this function was taken from the course material
+
+
 def calcUndistort(img, objpoints, imgpoints):
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
         objpoints, imgpoints, img.shape[1::-1], None, None)
@@ -54,13 +58,17 @@ def calcUndistort(img, objpoints, imgpoints):
 
     return dst
 
-#Part of this function was taken from the course material
+# Part of this function was taken from the course material
+
+
 def calcMtxDist(img, objpoints, imgpoints):
     _, mtx, dist, _, _ = cv2.calibrateCamera(
         objpoints, imgpoints, img.shape[1::-1], None, None)
     return mtx, dist
 
-#Part of this function was taken from the course material
+# Part of this function was taken from the course material
+
+
 def corners_unwarp(img, nx, ny, mtx, dist):
     # Use the OpenCV undistort() function to remove distortion
     undist = cv2.undistort(img, mtx, dist, None, mtx)
@@ -97,7 +105,9 @@ def corners_unwarp(img, nx, ny, mtx, dist):
         return warped, M
     return None, None
 
-#Part of this function was taken from the course material
+# Part of this function was taken from the course material
+
+
 def lines_unwarp(img, mtx, dist):
     # Use the OpenCV undistort() function to remove distortion
     undist = cv2.undistort(img, mtx, dist, None, mtx)
