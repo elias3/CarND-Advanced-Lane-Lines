@@ -129,9 +129,13 @@ In our case y is the second order polynomial. And its derivative is just: 2Ay + 
 The second derivative will be: 2A*y.
 In our case the function is f(y) and not f(x) as in the formula. This is due to the reason that the lines can be parallel, and in an f(x) representation it will no longer be a function, since the same x can have multiple values. 
 
+For the position of the vehicle, I assumed that the car is at the center of the image. Then I calculated the center of the road using the difference of the two x coordinates of the two detected polynomials - they are fond at the end of the array since we are searching for the highest y value.
+
+I did this in lines #329 through #348 in my code in `line_curve.py`. This calculation is based on the following formula:
+
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines #439 through #489 in my code in `line_curve.py` in the function `lane_finding_pipeline()`.  Here is an example of my result on a test image:
+I implemented this step in lines #363 through #367 in my code in `line_curve.py` in the class `Params()` in the constructor.
 
 ![alt text][image1_transformed]
 
